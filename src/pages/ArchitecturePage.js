@@ -109,7 +109,7 @@ const styles = {
     backgroundColor: "#f9f9f9",
   },
   image: {
-    width: "100%",
+    width: "100%", 
     borderRadius: "6px",
     marginTop: "10px",
   },

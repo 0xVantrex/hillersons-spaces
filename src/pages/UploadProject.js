@@ -3,6 +3,7 @@ import { db } from "../firebase";
 import { collection, addDoc, serverTimestamp }from "firebase/firestore";
 import axios from "axios";
 import { reauthenticateWithCredential } from "firebase/auth";
+import {doc, updateDoc} from "firebase/firestore";
 
 const UploadProject = () => {
   const [formData, setFormData] = useState({
@@ -16,14 +17,14 @@ const UploadProject = () => {
     height: "",
     rooms: "",
     price: "",
-    planImageURL: "",
+    planImageURLs: "",
     finalImageURLs: "",
     mainCategory: "",
     subCategoryForInterior: "",
     mainCategoryForRenovation: "",
     subCategoryForRenovation: "",
   });
-  const [planFile, setplanFile] = useState(null);
+  const [planFiles, setplanFiles] = useState(null);
   const [finalFiles, setfinalFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
 
@@ -71,18 +72,22 @@ const UploadProject = () => {
     e.preventDefault();
     setUploading(true);
     try {
-      const planImageURL= await handleUpload(planFile);
+      const planImageURLs = await Promise.all(
+        Array.from(planFiles).map((file) => handleUpload(file))
+      );
 
       const finalImageURLs = await Promise.all(
         Array.from(finalFiles).map((file) => handleUpload(file))
       );
 
-      await addDoc(collection(db, "projects"), {
+      const docRef = await addDoc(collection(db, "projects"), {
         ...formData,
-        planImageURL,
+        planImageURLs,
         finalImageURLs,
         createdAt: serverTimestamp(),
       });
+
+      await updateDoc(docRef, { id: docRef.id });
       alert("Project uploaded successfully!");
       setFormData({
         title: "",
@@ -102,7 +107,7 @@ const UploadProject = () => {
         mainCategoryForRenovation: "",
         subCategoryForRenovation: "",
       });
-      setplanFile(null);
+      setplanFiles([]);
       setfinalFiles([]);
     } catch (error) {
       console.error("Upload failed", error);
@@ -127,7 +132,7 @@ const UploadProject = () => {
           value={formData.title}
           onChange={handleChange}
           required
-          styles={styles.input}
+          style={styles.input}
          />
          <textarea
           name="description"
@@ -272,16 +277,17 @@ const UploadProject = () => {
             </>
           )}
 
-          <label style={styles.label}>Plan Image (Drawn Plan)</label>
+          <label style={styles.label}>Plan Image (2-5)</label>
           <input
             type='file'
             accept="image/*"
-            onChange={(e) => setplanFile(e.target.files[0])}
+            multiple
+            onChange={(e) => setplanFiles(e.target.files)}
             required
             style={styles.fileInput}
             />
 
-            <label style={styles.label}>Final Product Images (3-5)</label>
+            <label style={styles.label}>Final Product Images (3-10)</label>
             <input
               type="file"
               accept="image/*"
@@ -301,12 +307,13 @@ const UploadProject = () => {
 };
 
 const styles ={
+
   container: {
     padding: "40px 20px",
     maxWidth: "600px",
     margin: "0 auto",
     fontFamily: "Segoe UI, sans-serif",
-
+    backgroundColor: "#F0F8FF",
   },
   heading: {
     fontSize: "2rem",
@@ -324,6 +331,7 @@ const styles ={
     borderRadius: "6px",
     border: "1px solid #ccc",
     fontSize: "16px",
+    backgroundColor: "#F4F1F8",
   },
   textarea: {
     padding: "10px",
@@ -332,6 +340,7 @@ const styles ={
     border: "1px solid #ccc",
     fontSize: "16px",
     resize: "vertical",
+    backgroundColor: "#F4F1F8",
   },
   select: {
     padding: "10px",
@@ -339,6 +348,7 @@ const styles ={
     borderRadius: "6px",
     border: "1px solid #ccc",
     fontSize: "16px",
+    backgroundColor: "#F4F1F8",
   },
   label: {
     marginBottom: "6px",
@@ -350,8 +360,7 @@ const styles ={
   },
   button: {
     padding: "12px",
-    backgroundColor: "#007BFF",
-    color: "#fff",
+    color: "#333",
     fontSize: "16px",
     border: "none",
     borderRadius: "6px",

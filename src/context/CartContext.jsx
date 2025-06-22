@@ -1,17 +1,29 @@
+//src/context/CartContext.jsx
 "use client";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
-const CartContext = createContext(undefined);
+const CartContext = createContext();
+const CART_LOCALSTORAGE_KEY = "hills_cart";
 
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (!context)
-    throw new Error("useCart must be used within a CartProvider");
-  return context;
-};
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(CART_LOCALSTORAGE_KEY);
+    if (saved) {
+      try {
+        setCart(JSON.parse(saved));
+      } catch (e) {
+        localStorage.removeItem(CART_LOCALSTORAGE_KEY);
+      }
+    }
+  }, []);
+
+  const updateQuantity = (id,newQuantity) => {
+    setCart(prev => prev.map (item => item.id === id ? { ...item, quantity: Math.max(1,newQuantity) } : item
+  ));
+  };
 
   const addItem = (product) => {
     setCart((prev) => {
@@ -34,7 +46,13 @@ export const CartProvider = ({ children }) => {
   const clearCart = () => setCart([]);
 
   return (
-    <CartContext.Provider value={{ cart, addItem, removeItem, clearCart }}>
+    <CartContext.Provider 
+    value={{ 
+      cart,
+      addItem, 
+      removeItem, 
+      clearCart,
+      updateQuantity }}>
       {children}
     </CartContext.Provider>
   );
