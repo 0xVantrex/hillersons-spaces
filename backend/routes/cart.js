@@ -1,5 +1,5 @@
 const express = require("express");
-const verifyToken = require("../middleware/auth"); // Make sure this path is correct
+const verifyToken = require("../middleware/auth"); 
 const Cart = require("../models/Cart");
 
 const router = express.Router();
