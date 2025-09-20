@@ -3,7 +3,7 @@ const Inquiry = require("../models/Inquiry");
 
 const router = express.Router();
 
-// Create new inquiry
+// new inquiry
 router.post("/", async (req, res) => {
   try {
     const inquiry = await Inquiry.create(req.body);
