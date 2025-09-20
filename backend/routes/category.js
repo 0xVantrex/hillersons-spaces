@@ -3,7 +3,6 @@ const Plan = require("../models/Plan");
 
 const router = express.Router();
 
-//Get category with counts
 router.get("/", async (req, res) => {
   try {
     const categories = await Plan.aggregate([
