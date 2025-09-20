@@ -401,7 +401,7 @@ const HomePage = () => {
                 <div className="relative overflow-hidden rounded-2xl">
                   <img
                     src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&h=400&fit=crop"
-                    alt="free House Design"
+                    alt="Elegant House Design"
                     className="w-full h-80 object-cover transition-transform duration-700 hover:scale-110"
                     loading="lazy"
                   />

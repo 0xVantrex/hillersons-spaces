@@ -40,6 +40,9 @@ app.use("/api/custom-requests", CustomRequests);
 const categoryRoutes = require("./routes/category");
 app.use("/api/categories", categoryRoutes);
 
+const projects = require("./routes/projects");
+app.use("/api/projects", projects);
+
 // Mongo + Server boot
 const PORT = process.env.PORT || 5000;
 
