@@ -5,22 +5,29 @@ require("dotenv").config();
 
 const app = express();
 
+// -----------------------------
 // Middleware
+// -----------------------------
+const allowedOrigins = [
+  "http://localhost:3000", // for local dev
+  "http://192.168.8.113:3000", // replace with your desktop IP
+];
+
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: allowedOrigins,
     methods: ["GET", "POST", "OPTIONS"],
+    credentials: true,
   })
 );
+
 app.use(express.json());
 
+// -----------------------------
 // Routes
+// -----------------------------
 const authRoutes = require("./routes/auth");
 app.use("/api/auth", authRoutes);
-
-app.get("/", (req, res) => {
-  res.send("🔥 Backend API is up and running");
-});
 
 const planRoutes = require("./routes/plans");
 app.use("/api/plans", planRoutes);
@@ -32,7 +39,7 @@ const inquiryRoutes = require("./routes/Inquiry");
 app.use("/api/inquiries", inquiryRoutes);
 
 const favoriteRoutes = require("./routes/favoriteRoutes");
-app.use("/api/plans", favoriteRoutes);
+app.use("/api/favorites", favoriteRoutes);
 
 const CustomRequests = require("./routes/CustomRequests");
 app.use("/api/custom-requests", CustomRequests);
@@ -43,18 +50,30 @@ app.use("/api/categories", categoryRoutes);
 const projects = require("./routes/projects");
 app.use("/api/projects", projects);
 
+// -----------------------------
+// Test route
+// -----------------------------
+app.get("/", (req, res) => {
+  res.send("🔥 Backend API is up and running");
+});
+
+// -----------------------------
 // Mongo + Server boot
+// -----------------------------
 const PORT = process.env.PORT || 5000;
 
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("✅ Connected to MongoDB");
-    app.listen(PORT, () => {
-      console.log(`✅ Backend running on http://localhost:${PORT}`);
+    // Listen on all network interfaces
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`✅ Backend running on http://0.0.0.0:${PORT}`);
+      console.log(`🌐 Access via LAN: http://192.168.8.113:${PORT}`);
     });
   })
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err);
-    process.exit(1); // quit if DB connection fails
+    process.exit(1);
   });
+
