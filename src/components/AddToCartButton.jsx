@@ -1,3 +1,4 @@
+//src/components/AddToCartButton.jsx
 "use client";
 import { useCart } from "@/context/CartContext"; // ✅ adjust this path as needed
 import { Button } from "@/components/ui/button"; // ✅ adjust if needed

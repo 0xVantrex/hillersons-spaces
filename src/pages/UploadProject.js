@@ -1,372 +1,388 @@
 import React, { useState } from "react";
-import { db } from "../firebase";
-import { collection, addDoc, serverTimestamp }from "firebase/firestore";
-import axios from "axios";
-import { reauthenticateWithCredential } from "firebase/auth";
-import {doc, updateDoc} from "firebase/firestore";
+import { Upload, Image, FileText, Building, Home, Heart, Palette, Wrench } from "lucide-react";
+import { API_BASE_URL } from "../lib/api";
 
+const token = localStorage.getItem("token");
 const UploadProject = () => {
   const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    topLevelCategory: "Architecture",
-    subCategory: "Mixed use development",
-    floorCount: "",
-    length: "",
-    width: "",
-    height: "",
-    rooms: "",
-    price: "",
-    planImageURLs: "",
-    finalImageURLs: "",
-    mainCategory: "",
-    subCategoryForInterior: "",
-    mainCategoryForRenovation: "",
-    subCategoryForRenovation: "",
-  });
-  const [planFiles, setplanFiles] = useState(null);
-  const [finalFiles, setfinalFiles] = useState([]);
-  const [uploading, setUploading] = useState(false);
-
-  const subCategoryOptions = {
-    "Commercial Projects": [
-      "Mixed use development",
-      "Office park",
-      "Commercial plaza",
-      "Retail shops",
-      "Godowns & warehouses",
-      "Service station",
-      "Hospitality devlopment",
-    ],
-    "Residential Projects": [
-      "Residential apartment development",
-      "Residential house development",
-      "Residential estate development",
-    ],
-    "Social Amenities Projects": [
-      "Hospital development",
-      "Education facility development",
-      "Social market development",
-      "Religion facility develpment",
-    ],
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleUpload = async (file) => {
-    const data = new FormData();
-    data.append("file", file);
-    data.append("upload_preset", "project_upload");
-
-    const res =await axios.post(
-      "https://api.cloudinary.com/v1_1/dbj7nhyy4/auto/upload",
-      data
-    );
-    return res.data.secure_url;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setUploading(true);
-    try {
-      const planImageURLs = await Promise.all(
-        Array.from(planFiles).map((file) => handleUpload(file))
-      );
-
-      const finalImageURLs = await Promise.all(
-        Array.from(finalFiles).map((file) => handleUpload(file))
-      );
-
-      const docRef = await addDoc(collection(db, "projects"), {
-        ...formData,
-        planImageURLs,
-        finalImageURLs,
-        createdAt: serverTimestamp(),
-      });
-
-      await updateDoc(docRef, { id: docRef.id });
-      alert("Project uploaded successfully!");
-      setFormData({
         title: "",
         description: "",
-        topLevelCategory: "Architecture",
-        subCategory: "Mixed use development",
+        subCategoryGroup: "Commercial",       
+        subCategory: "Mixed use development",          
         floorCount: "",
         length: "",
         width: "",
         height: "",
         rooms: "",
         price: "",
-        planImageURL: "",
-        finalImageURLs: "",
-        mainCategory: "",
-        subCategoryForInterior: "",
-        mainCategoryForRenovation: "",
-        subCategoryForRenovation: "",
-      });
-      setplanFiles([]);
-      setfinalFiles([]);
-    } catch (error) {
-      console.error("Upload failed", error);
-      alert("Upload failed.");
-    }
-    setUploading(false);
+        planImageURLs: [],
+        finalImageURLs: [],
+        featured: false,        
+        newListing: false,      
+        premium: false,
+  });
+  const [planFiles, setPlanFiles] = useState(null);
+  const [finalFiles, setFinalFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+
+  const categoryOptions = {
+    "Commercial": [
+      "Mixed use development",
+      "Office park", 
+      "Commercial plaza",
+      "Retail shops",
+      "Godowns & warehouses",
+      "Service station",
+      "Hospitality development"
+    ],
+    "Residential": [
+      "Residential apartment development",
+      "Residential house development", 
+      "Residential estate development"
+    ],
+    "Social": [
+      "Hospital development",
+      "Education facility development",
+      "Social market development",
+      "Religion facility development"
+    ],
+    "Interior": [],
+    "Renovation": []
   };
-  const subGroups = 
-  formData.topLevelCategory === "Architecture"
-    ? ["Commercial Projects", "Residential Projects", "Social Amenities Projects"]
-    : [formData.topLevelCategory];
+  const getCategoryIcon = (category) => {
+    switch(category) {
+      case "Commercial": return <Building className="w-5 h-5" />;
+      case "Residential": return <Home className="w-5 h-5" />;
+      case "Social": return <Heart className="w-5 h-5" />;
+      case "Interior": return <Palette className="w-5 h-5" />;
+      case "Renovation": return <Wrench className="w-5 h-5" />;
+      default: return null;
+    }
+  };
 
-  const subOptions = subCategoryOptions[formData.subCategoryGroup] || [];
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => {
+      const newData = { ...prev, [name]: value };
+      
+      // Reset subcategory when main category changes
+      if (name === "subCategoryGroup") {
+        const subOptions = categoryOptions[value] || [];
+        newData.subCategory = subOptions[0] || "";
+      }
+      
+      return newData;
+    });
+  };
 
-  return (
-    <div style = {styles.container}>
-      <h2 style={styles.heading}>Upload a New Project</h2>
-      <form onSubmit= {handleSubmit} style= {styles.form}>
-        <input
-          name="title"
-          placeholder="Project Title"
-          value={formData.title}
-          onChange={handleChange}
-          required
-          style={styles.input}
-         />
-         <textarea
-          name="description"
-          placeholder="Project Description"
-          value={formData.description}
-          onChange={handleChange}
-          required
-          rows={4}
-          style={styles.textarea}
-         />
-         <input
-          name="rooms"
-          placeholder="Number of Rooms"
-          value={formData.rooms}
-          onChange={handleChange}
-          required
-          style={styles.input}
-         />
-         <input
-         name="floorCount"
-         placeholder="Floor Count"
-         value={formData.floorCount}
-         onChange={handleChange}
-         required
-         style={styles.input}
-         />
-         <input
-         name="length"
-         placeholder="Length (m/ft)"
-         value={formData.length}
-         onChange={handleChange}
-         required
-         style={styles.input}
-         />
-         <input
-         name="width"
-         placeholder="Width (m/ft)"
-         value={formData.width}
-         onChange={handleChange}
-         required
-         style={styles.input}
-         />
-         <input
-         name="height"
-         placeholder="Height"
-         value={formData.height}
-         onChange={handleChange}
-         required
-         style={styles.input}
-         />
-         <input
-         name="price"
-         placeholder="Price (KES/USD)"
-         value={formData.price}
-         onChange={handleChange}
-         required
-         style={styles.input}
-         />
 
-         <label style={styles.label}> Top Level Category</label>
-         <select 
-          name="topLevelCategory"
-          value={formData.topLevelCategory}
-          onChange={handleChange}
-          style={styles.select}
-          >
-            <option>Architecture</option>
-            <option>Interior Design</option>
-            <option>Renovation Work</option>
-          </select>
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setUploading(true);
 
-          {formData.topLevelCategory === "Architecture" && (
-            <>
-            <label style={styles.label}>Sub Category Group</label>
-            <select
-              name="subCategoryGroup"
-              value={formData.subCategoryGroup}
-              onChange={handleChange}
-              style={styles.select}
-              >
-                {subGroups.map((group) => (
-                  <option key={group}>{group}</option>
-                ))}
-                </select>
-                
-                <label style={styles.label}> Sub Category</label>
-                <select
-                  name="subCategory"
-                  value={formData.subCategory}
-                  onChange={handleChange}
-                  style={styles.select}
-                  >
-                    {subOptions.map((sub) => (
-                      <option key={sub}>{sub}</option>
-                    ))}
+  try {
+    const uploadData = new FormData();
 
-                  </select>
-                </>
-          )}
+    // Append text fields
+    uploadData.append('title', formData.title);
+    uploadData.append('description', formData.description);
+    uploadData.append('price', Number(formData.price));
+    uploadData.append('rooms', formData.rooms);
+    uploadData.append('subCategoryGroup', formData.subCategoryGroup);
+    uploadData.append('subCategory', formData.subCategory);
+    uploadData.append('premium', formData.premium);
+    uploadData.append('featured', formData.featured);
+    uploadData.append('newListing', formData.newListing);
 
-          {formData.topLevelCategory === "Interior Design" && (
-            <>
-            <label style={styles.label}>Main Category (e.g. Living Room, Kitchen) </label>
-            <input 
-              name="mainCategory"
-              placeholder="Main Category"
-              value={formData.mainCategory}
-              onChange={handleChange}
-              style={styles.input}
-              required
-            />
-            <input
-              name="subCategoryForInterior"
-              placeholder="Sub Category (optional)"
-              value={formData.subCategoryForInterior}
-              onChange={handleChange}
-              style={styles.input}
-            />  
+    // Append ALL images under the key "images" (matches backend multer)
+    if (planFiles) {
+      Array.from(planFiles).forEach(file => uploadData.append('planImages', file));
+    }
+    if (finalFiles) {
+      Array.from(finalFiles).forEach(file => uploadData.append('finalImages', file));
+    }
 
-              </>
-          )}
+    // Send request
+    const res = await fetch(`${API_BASE_URL}/api/plans/upload`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`, // keep auth
+      },
+      body: uploadData,
+    });
 
-          {formData.topLevelCategory === "Renovation Work" && (
-            <>
-            <label style={styles.label}>Main Category (e.g. Roof Repair)</label>
-            <input
-              name="mainCategoryForRenovation"
-              placeholder="Main Category"
-              value={formData.mainCategoryForRenovation}
-              onChange={handleChange}
-              style={styles.input}
-              required
-            />
-            <input
-              name="subCategoryForRenovation"
-              placeholder="Sub Category (optional)"
-              value={formData.mainCategoryForRenovation}
-              onChange={handleChange}
-              style={styles.input}
-              required
-              />
-            </>
-          )}
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || 'Failed to upload project');
+    }
 
-          <label style={styles.label}>Plan Image (2-5)</label>
-          <input
-            type='file'
-            accept="image/*"
-            multiple
-            onChange={(e) => setplanFiles(e.target.files)}
-            required
-            style={styles.fileInput}
-            />
+    alert('Project uploaded successfully!');
 
-            <label style={styles.label}>Final Product Images (3-10)</label>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(e) => setfinalFiles(e.target.files)}
-              required
-              style={styles.fileInput}
-              />
+    // Reset state
+    setFormData({
+      title: "",
+      description: "",
+      subCategoryGroup: "Commercial",
+      subCategory: "Mixed use development",
+      floorCount: "",
+      length: "",
+      width: "",
+      height: "",
+      rooms: "",
+      price: "",
+      planImageURLs: [],
+      finalImageURLs: [],
+      featured: false,
+      newListing: false,
+      premium: false,
+    });
+    setPlanFiles(null);
+    setFinalFiles([]);
+  } catch (error) {
+    console.error("Upload failed", error);
+    alert(`Upload failed: ${error.message}`);
+  }
 
-              <button type="submit" disabled={uploading} style={styles.button}>
-                {uploading ? "Uploading..." : "Upload Project"}
-              </button>
-            </form>
-    </div>
-  );
-
+  setUploading(false);
 };
 
-const styles ={
+  const subOptions = categoryOptions[formData.subCategoryGroup] || [];
+  const showSubCategory = subOptions.length > 0;
 
-  container: {
-    padding: "40px 20px",
-    maxWidth: "600px",
-    margin: "0 auto",
-    fontFamily: "Segoe UI, sans-serif",
-    backgroundColor: "#F0F8FF",
-  },
-  heading: {
-    fontSize: "2rem",
-    color: "#333",
-    textAlign: "center",
-    marginBottom: "30px",
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-  },
-  input: {
-    padding: "10px",
-    marginBottom: "20px",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
-    fontSize: "16px",
-    backgroundColor: "#F4F1F8",
-  },
-  textarea: {
-    padding: "10px",
-    marginBottom: "20px",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
-    fontSize: "16px",
-    resize: "vertical",
-    backgroundColor: "#F4F1F8",
-  },
-  select: {
-    padding: "10px",
-    marginBottom: "20px",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
-    fontSize: "16px",
-    backgroundColor: "#F4F1F8",
-  },
-  label: {
-    marginBottom: "6px",
-    fontWeight: "bold",
-    color: "#555",
-  },
-  fileInput: {
-    marginBottom: "20px",
-  },
-  button: {
-    padding: "12px",
-    color: "#333",
-    fontSize: "16px",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    transition: "background-color 0.3s",
-  },
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-lime-50 py-8 px-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl border border-emerald-100 overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-emerald-600 to-lime-600 px-8 py-6">
+            <div className="flex items-center gap-3">
+              <Upload className="w-8 h-8 text-white" />
+              <h1 className="text-3xl font-bold text-white">Upload New Project</h1>
+            </div>
+            <p className="text-emerald-100 mt-2">Share your amazing work with the community</p>
+          </div>
+
+          {/* Form Content */}
+          <div className="p-8 space-y-6">
+            {/* Project Title */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <FileText className="w-4 h-4" />
+                Project Title
+              </label>
+              <input
+                name="title"
+                placeholder="Enter your project title"
+                value={formData.title}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 outline-none"
+              />
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <FileText className="w-4 h-4" />
+                Project Description
+              </label>
+              <textarea
+                name="description"
+                placeholder="Describe your project in detail..."
+                value={formData.description}
+                onChange={handleChange}
+                rows={4}
+                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 outline-none resize-vertical"
+              />
+            </div>
+
+            {/* Category Selection */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <Building className="w-4 h-4" />
+                  Main Category
+                </label>
+                <select
+                  name="subCategoryGroup"
+                  value={formData.subCategoryGroup}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 outline-none bg-white"
+                >
+                  {Object.keys(categoryOptions).map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {showSubCategory && (
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    {getCategoryIcon(formData.subCategoryGroup)}
+                    Sub Category
+                  </label>
+                  <select
+                    name="subCategory"
+                    value={formData.subCategory}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 outline-none bg-white"
+                  >
+                    {subOptions.map((sub) => (
+                      <option key={sub} value={sub}>
+                        {sub}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Project Details */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Number of Rooms</label>
+                <input
+                  name="rooms"
+                  type="number"
+                  placeholder="e.g., 3"
+                  value={formData.rooms}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 outline-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Floor Count</label>
+                <input
+                  name="floorCount"
+                  type="number"
+                  placeholder="e.g., 2"
+                  value={formData.floorCount}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Dimensions */}
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Length (m)</label>
+                <input
+                  name="length"
+                  type="number"
+                  placeholder="e.g., 15"
+                  value={formData.length}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 outline-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Width (m)</label>
+                <input
+                  name="width"
+                  type="number"
+                  placeholder="e.g., 12"
+                  value={formData.width}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 outline-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Height (m)</label>
+                <input
+                  name="height"
+                  type="number"
+                  placeholder="e.g., 3"
+                  value={formData.height}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Price */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700">Price (KES)</label>
+              <input
+                name="price"
+                type="number"
+                placeholder="e.g., 2500000"
+                value={formData.price}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 outline-none"
+              />
+            </div>
+
+            {/* File Uploads */}
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <Image className="w-4 h-4" />
+                  Plan Images (2-5 images)
+                </label>
+                <div className="border-2 border-dashed border-emerald-300 rounded-lg p-6 text-center hover:border-emerald-400 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => setPlanFiles(e.target.files)}
+                    className="w-full"
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    Upload your architectural plans and blueprints
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <Image className="w-4 h-4" />
+                  Final Product Images (3-10 images)
+                </label>
+                <div className="border-2 border-dashed border-emerald-300 rounded-lg p-6 text-center hover:border-emerald-400 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => setFinalFiles(e.target.files)}
+                    className="w-full"
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    Upload photos of your completed project
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="pt-6">
+              <button
+                onClick={handleSubmit}
+                disabled={uploading}
+                className="w-full bg-gradient-to-r from-emerald-600 to-lime-600 hover:from-emerald-700 hover:to-lime-700 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+              >
+                {uploading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-5 h-5" />
+                    Upload Project
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default UploadProject;

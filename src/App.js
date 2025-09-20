@@ -1,8 +1,13 @@
-import React from "react";
-import { Routes, Route } from "react-router-dom";
+// src/App.js
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
+import { useEffect } from "react";
+import { pingBackend } from "./api/backend";
+
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import Home from "./pages/Home";
+import ProfilePage from "./pages/Profile";
+import HomePage from "./pages/Home";
 import UploadProject from "./pages/UploadProject";
 import ProductDetail from "./pages/productDetail";
 import AllProducts from "./pages/AllProducts";
@@ -10,26 +15,85 @@ import Categories from "./pages/Categories";
 import CategoryListing from "./pages/CategoryListing";
 import AdminDashboard from "./pages/AdminDashboard";
 import CartPage from "./App/cart/page";
+import AboutUs from "./pages/AboutUs";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import ResetPassword from "./pages/ResetPassword";
+import CustomDesignForm from "./pages/CustomDesignForm";
+import Contact from "./pages/Contact";
 
 function App() {
+  const { user, loading } = useAuth();
+  useEffect(() => {
+    pingBackend()
+      .then((data) => console.log("Backend ping successful:", data))
+      .catch((error) => console.error("Error pinging backend:", error));
+  }, []);
+
+  if (loading) return <div className="text-center p-10">Loading...</div>;
+
+  const RequireAuth = ({ children }) => {
+    return user ? children : <Navigate to="/login" />;
+  };
+
   return (
     <Routes>
-      <Route path="/" element={<div><h1>Welcome to Building Consultancy</h1></div>} />
+      <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
-      <Route path="/upload" element={<UploadProject />} />
-      <Route path="/Home" element={<Home />} />
-      <Route path="/productDetail" element={< ProductDetail />}/>
-      <Route path="/category/:mainCategory" element={<CategoryListing />} />
-      <Route path="/category/:mainCategory/:subCategory" element={<CategoryListing />} />
-      <Route path="/AllProducts" element={<AllProducts/>}/>
-      <Route path="/Categories" element={<Categories/>}/>
-      <Route path="/CategoryListing" element={<CategoryListing/>}/>
-      <Route path="/admin/dashboard" element={<AdminDashboard /> } />
-      <Route path="/cart" element={<CartPage />} />
+      <Route
+        path="/profile"
+        element={
+          <RequireAuth>
+            <ProfilePage />
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/admin/upload"
+        element={
+          <RequireAuth>
+            <UploadProject />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin/dashboard"
+        element={
+          <RequireAuth>
+            <AdminDashboard />
+          </RequireAuth>
+        }
+      />
+
+      {/* Regular Pages */}
+      <Route path="/productDetail" element={<ProductDetail />} />
       <Route path="/product/:id" element={<ProductDetail />} />
-      <Route path="/quick-buy/:id" element={<CartPage/>} />
+      <Route path="/quick-buy/:id" element={<CartPage />} />
+      <Route
+        path="/categories/:subCategoryGroup"
+        element={<CategoryListing />}
+      />
+      <Route
+        path="/categories/:subCategoryGroup/:subCategory"
+        element={<CategoryListing />}
+      />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+
+      {/* Protected Routes */}
+      <Route path="/home" element={<HomePage />} />
+      <Route path="/allproducts" element={<AllProducts />} />
+      <Route path="/categories" element={<Categories />} />
+      <Route path="/categorylisting" element={<CategoryListing />} />
+      <Route path="/cart" element={<CartPage />} />
+      <Route path="/aboutus" element={<AboutUs />} />
+      <Route path="/custom-design" element={<CustomDesignForm />} />
+      <Route path="/contact" element={<Contact />} />
+
+      {/* Redirects */}
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
     </Routes>
   );
 }
+
 export default App;

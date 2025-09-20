@@ -1,88 +1,161 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { db } from "../firebase";
-import { collection, getDocs } from "firebase/firestore";
-import { Search, Filter, Grid, List, Heart, Share2, MapPin, Bed, Bath, Square, Building, Eye, ArrowRight, SlidersHorizontal, X, ChevronDown, Star, Zap, TrendingUp, Award, Download, Phone, Mail } from "lucide-react";
-import '../index.css';
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Search,
+  Filter,
+  Grid,
+  List,
+  Eye,
+  ArrowRight,
+  SlidersHorizontal,
+  X,
+  ChevronDown,
+  Zap,
+  TrendingUp,
+  Award,
+  Pencil,
+  Mail,
+  Users,
+  CheckCircle,
+  Layers,
+  Home,
+  Briefcase,
+  Shield,
+  Flashlight,
+  Sparkles,
+  Crown,
+} from "lucide-react";
+import "../index.css";
+import QuickViewModal from "../components/QuickViewModal";
+import ProductCard from "../components/ProductCard";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
+import { API_BASE_URL } from "../lib/api";
 
 const AllProducts = () => {
   const navigate = useNavigate();
+  const [quickViewPlan, setQuickViewPlan] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState("grid");
   const [showFilters, setShowFilters] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [favorites, setFavorites] = useState(new Set());
-  const [hoveredCard, setHoveredCard] = useState(null);
   const [showQuickView, setShowQuickView] = useState(null);
-  
+  const [showSearch, setShowSearch] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [categories, setCategories] = useState([]);
+
   const [filters, setFilters] = useState({
     category: "",
     rooms: "",
     floors: "",
     featured: false,
     newListing: false,
-    customizable: false
+    customizable: false,
+    premium: false,
+    quickDelivery: false,
   });
-  const [priceRange, setPriceRange] = useState([0, 1000000]);
-  const [areaRange, setAreaRange] = useState([0, 1000]);
+  const [priceRange, setPriceRange] = useState([0, 10000000]);
   const [sort, setSort] = useState("featured");
 
+  // Trust indicators
+  const trustIndicators = [
+    { icon: Shield, text: "100% Verified Architects", color: "text-green-600" },
+    { icon: Flashlight, text: "Instant Download", color: "text-blue-600" },
+    { icon: Users, text: "10,000+ Happy Clients", color: "text-purple-600" },
+    { icon: Award, text: "Award-Winning Designs", color: "text-yellow-600" },
+  ];
+
   useEffect(() => {
-    const fetchData = async () => {
-      const querySnapshot = await getDocs(collection(db, "projects"));
-      const data = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        price: parseFloat(doc.data().price || 0),
-        area: parseFloat(doc.data().length || 0) * parseFloat(doc.data().width || 0),
-        featured: Math.random() > 0.7,
-        newListing: Math.random() > 0.8,
-        customizable: Math.random() > 0.6,
-        rating: (Math.random() * 2 + 3).toFixed(1),
-        views: Math.floor(Math.random() * 1000) + 100,
-        saved: Math.floor(Math.random() * 50) + 5,
-        architect: ["John Mbugua", "Sarah Kimani", "David Ochieng", "Grace Wanjiku"][Math.floor(Math.random() * 4)],
-        completionTime: ["2-4 weeks", "3-6 weeks", "1-2 months"][Math.floor(Math.random() * 3)],
-        includes: ["Architectural Plans", "Structural Plans", "3D Renders", "Material List"]
-      }));
-      setProducts(data);
-      setLoading(false);
-    };
-    fetchData();
+    fetchPlans();
   }, []);
+  const fetchPlans = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/plans`);
+      if (!res.ok) throw new Error("Failed to fetch products");
+      const data = await res.json();
+      console.log("Fetched plans:", data); // 👈 check fields
+      const normalizedData = data.map((item) => {
+        const images =
+          Array.isArray(item.finalImageURLs) && item.finalImageURLs.length > 0
+            ? item.finalImageURLs
+            : ["https://via.placeholder.com/600x400?text=No+Image"];
+
+        return { ...item, images };
+      });
+
+      setProducts(normalizedData);
+      console.log("🛠 Normalized products:", normalizedData);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      const matchesSearch = !searchQuery || 
-        p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.architect?.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      return (
-        matchesSearch &&
-        (!filters.category || p.subCategoryGroup?.includes(filters.category)) &&
-        (!filters.rooms || parseInt(p.rooms || 0) >= parseInt(filters.rooms)) &&
-        (!filters.floors || parseInt(p.floorCount || 0) >= parseInt(filters.floors)) &&
-        (!filters.featured || p.featured) &&
-        (!filters.newListing || p.newListing) &&
-        (!filters.customizable || p.customizable) &&
-        p.price >= priceRange[0] && p.price <= priceRange[1] &&
-        p.area >= areaRange[0] && p.area <= areaRange[1]
-      );
-    }).sort((a, b) => {
-      if (sort === "featured") return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
-      if (sort === "price-low") return a.price - b.price;
-      if (sort === "price-high") return b.price - a.price;
-      if (sort === "newest") return (b.newListing ? 1 : 0) - (a.newListing ? 1 : 0);
-      if (sort === "popular") return b.views - a.views;
-      if (sort === "rating") return parseFloat(b.rating) - parseFloat(a.rating);
-      return 0;
-    });
-  }, [products, filters, priceRange, areaRange, sort, searchQuery]);
+    return products
+      .filter((p) => {
+        const matchesSearch =
+          !searchQuery ||
+          p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.architect?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.tags?.some((tag) =>
+            tag.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+
+        const matchesCategory =
+          activeCategory === "all" ||
+          (activeCategory === "Residential" &&
+            p.subCategoryGroup?.includes("Residential")) ||
+          (activeCategory === "Commercial" &&
+            p.subCategoryGroup?.includes("Commercial")) ||
+          (activeCategory === "Social" &&
+            p.subCategoryGroup?.includes("Social")) ||
+          (activeCategory === "Interior" &&
+            p.subCategoryGroup?.includes("Interior")) ||
+          (activeCategory === "Renovation" &&
+            p.subCategoryGroup?.includes("Renovation")) ||
+          (activeCategory === "Luxury" && p.premium);
+
+        return (
+          matchesSearch &&
+          matchesCategory &&
+          (!filters.category ||
+            p.subCategoryGroup?.includes(filters.category)) &&
+          (!filters.rooms ||
+            parseInt(p.rooms || 0) >= parseInt(filters.rooms)) &&
+          (!filters.floors ||
+            parseInt(p.floorCount || 0) >= parseInt(filters.floors)) &&
+          (!filters.featured || p.featured) &&
+          (!filters.newListing || p.newListing) &&
+          (!filters.customizable || p.customizable) &&
+          (!filters.premium || p.premium) &&
+          p.price >= priceRange[0] &&
+          p.price <= priceRange[1]
+        );
+      })
+      .sort((a, b) => {
+        if (sort === "featured")
+          return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+        if (sort === "price-low") return a.price - b.price;
+        if (sort === "price-high") return b.price - a.price;
+        if (sort === "newest")
+          return (b.newListing ? 1 : 0) - (a.newListing ? 1 : 0);
+        if (sort === "popular") return b.views - a.views;
+        if (sort === "rating")
+          return parseFloat(b.rating) - parseFloat(a.rating);
+        if (sort === "downloads") return b.downloads - a.downloads;
+        return 0;
+      });
+  }, [products, filters, priceRange, sort, searchQuery, activeCategory]);
 
   const toggleFavorite = (productId) => {
-    setFavorites(prev => {
+    setFavorites((prev) => {
       const newFavorites = new Set(prev);
       if (newFavorites.has(productId)) {
         newFavorites.delete(productId);
@@ -100,31 +173,55 @@ const AllProducts = () => {
       floors: "",
       featured: false,
       newListing: false,
-      customizable: false
+      customizable: false,
+      premium: false,
+      quickDelivery: false,
     });
-    setPriceRange([0, 1000000]);
-    setAreaRange([0, 1000]);
+    setPriceRange([0, 10000000]);
     setSort("featured");
     setSearchQuery("");
+    setActiveCategory("all");
   };
 
-  const activeFiltersCount = Object.values(filters).filter(Boolean).length + 
-    (priceRange[0] > 0 || priceRange[1] < 1000000 ? 1 : 0) +
-    (areaRange[0] > 0 || areaRange[1] < 1000 ? 1 : 0);
+  const activeFiltersCount =
+    Object.values(filters).filter(Boolean).length +
+    (priceRange[0] > 0 || priceRange[1] < 10000000 ? 1 : 0) +
+    (activeCategory !== "all" ? 1 : 0);
+
+  const handleQuickView = useCallback((plan) => {
+    setQuickViewPlan(plan);
+    setShowQuickView(true);
+  }, []);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-green-50">
         <div className="container mx-auto px-4 py-8">
           {/* Premium Loading Animation */}
-          <div className="animate-pulse">
-            <div className="h-20 bg-gradient-to-r from-green-100 to-lime-100 rounded-2xl mb-8"></div>
+          <div className="animate-pulse space-y-8">
+            {/* Hero Loading */}
+            <div className="h-32 bg-gradient-to-r from-green-100 via-blue-100 to-purple-100 rounded-3xl"></div>
+
+            {/* Categories Loading */}
+            <div className="flex gap-4 overflow-hidden">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className="flex-shrink-0 w-48 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl"
+                ></div>
+              ))}
+            </div>
+
+            {/* Products Loading */}
             <div className="flex gap-6">
               <div className="w-80 h-96 bg-gradient-to-b from-gray-100 to-gray-200 rounded-2xl"></div>
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[...Array(9)].map((_, i) => (
-                  <div key={i} className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                    <div className="h-56 bg-gradient-to-br from-green-100 to-lime-100"></div>
+                  <div
+                    key={i}
+                    className="bg-white rounded-2xl shadow-lg overflow-hidden"
+                  >
+                    <div className="h-56 bg-gradient-to-br from-green-100 via-blue-100 to-purple-100"></div>
                     <div className="p-6 space-y-4">
                       <div className="h-6 bg-gray-200 rounded-lg"></div>
                       <div className="h-4 bg-gray-100 rounded w-2/3"></div>
@@ -144,794 +241,590 @@ const AllProducts = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-green-50">
-      <div className="container mx-auto px-4 py-8">
-        {/* Premium Header Section */}
-        <div className="mb-12">
-          <div className="bg-white rounded-3xl shadow-xl border border-slate-200/50 overflow-hidden">
-            <div className="bg-gradient-to-r from-green-600 via-lime-600 to-emerald-600 p-8 text-white">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                <div>
-                  <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-white to-green-100 bg-clip-text">
-                    Professional House Plans & Designs
-                  </h1>
-                  <p className="text-green-100 text-lg font-medium">
-                    {filteredProducts.length} Premium Architectural Designs • Trusted by 10,000+ Builders
-                  </p>
+    <div className="bg-gradient-to-b from-emerald-50 to-white overflow-x-hidden">
+      <Header
+        showSearch={showSearch}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        showMobileMenu={showMobileMenu}
+        setShowMobileMenu={setShowMobileMenu}
+        setShowSearch={setShowSearch}
+      />
+
+      <div className="min-h-screen">
+        <div className="container mx-auto px-4 py-8">
+          {/* Enhanced Hero Section */}
+          <div className="mb-12">
+            <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/50 overflow-hidden backdrop-blur-sm">
+              <div className="relative bg-gradient-to-r from-emerald-800 via-emerald-600 to-lime-500 p-10 text-white rounded-2xl shadow-xl overflow-hidden">
+                {/* Animated Background Elements */}
+                <div className="absolute inset-0 opacity-20">
+                  <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl animate-pulse"></div>
+                  <div className="absolute bottom-10 right-10 w-24 h-24 bg-yellow-300/20 rounded-full blur-lg animate-bounce"></div>
+                  <div className="absolute top-1/2 left-1/3 w-16 h-16 bg-pink-300/20 rounded-full blur-md animate-pulse delay-1000"></div>
                 </div>
-                
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
-                    <Award className="w-5 h-5 text-yellow-300" />
-                    <span className="text-sm font-semibold">Award Winning</span>
+
+                <div className="relative z-10">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+                          <Sparkles className="w-4 h-4 text-yellow-300" />
+                          <span className="text-sm font-bold">
+                            Premium Collection
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 bg-green-500/30 backdrop-blur-sm rounded-full px-4 py-2">
+                          <CheckCircle className="w-4 h-4 text-green-200" />
+                          <span className="text-sm font-semibold">
+                            Verified Designs
+                          </span>
+                        </div>
+                      </div>
+
+                      <h1 className="text-5xl lg:text-6xl font-black mb-4 bg-gradient-to-r from-white via-yellow-100 to-green-100 bg-clip-text text-transparent leading-tight">
+                        World-Class House Plans
+                      </h1>
+                      <p className="text-xl text-green-50 font-medium max-w-2xl">
+                        {filteredProducts.length} Premium Architectural Designs
+                        • Trusted by 10,000+ Builders Worldwide
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3">
+                      {trustIndicators.map((indicator, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-xl px-4 py-3 hover:bg-white/30 transition-all"
+                        >
+                          <indicator.icon
+                            className={`w-5 h-5 ${indicator.color
+                              .replace("text-", "text-")
+                              .replace("-600", "-300")}`}
+                          />
+                          <span className="text-sm font-semibold">
+                            {indicator.text}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
-                    <TrendingUp className="w-5 h-5 text-lime-300" />
-                    <span className="text-sm font-semibold">Fast Delivery</span>
+
+                  {/* Advanced Search Bar */}
+                  <div className="relative">
+                    <div className="flex flex-col lg:flex-row gap-4">
+                      <div className="flex-1 relative">
+                        <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-gray-400 w-6 h-6" />
+                        <input
+                          type="text"
+                          placeholder="Search by plan name, architect, style, or features..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-16 pr-6 py-5 rounded-2xl border-0 shadow-xl text-gray-700 placeholder-gray-500 focus:ring-4 focus:ring-green-500/20 focus:outline-none text-lg font-medium backdrop-blur-sm"
+                        />
+                        {searchQuery && (
+                          <button
+                            onClick={() => setSearchQuery("")}
+                            className="absolute right-6 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => setShowFilters(!showFilters)}
+                          className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-6 py-5 rounded-2xl transition-all duration-300 flex items-center gap-3 shadow-xl hover:shadow-2xl transform hover:scale-105"
+                        >
+                          <SlidersHorizontal className="w-5 h-5" />
+                          <span className="font-bold">Advanced Filters</span>
+                          {activeFiltersCount > 0 && (
+                            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
+                              {activeFiltersCount}
+                            </span>
+                          )}
+                        </button>
+
+                        <div className="flex bg-white/20 backdrop-blur-sm rounded-2xl overflow-hidden shadow-xl">
+                          <button
+                            onClick={() => setViewMode("grid")}
+                            className={`p-5 transition-all duration-300 ${
+                              viewMode === "grid"
+                                ? "bg-white/30 text-white scale-110"
+                                : "text-white/70 hover:text-white hover:bg-white/10"
+                            }`}
+                          >
+                            <Grid className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => setViewMode("list")}
+                            className={`p-5 transition-all duration-300 ${
+                              viewMode === "list"
+                                ? "bg-white/30 text-white scale-110"
+                                : "text-white/70 hover:text-white hover:bg-white/10"
+                            }`}
+                          >
+                            <List className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-              
-              {/* Advanced Search Bar */}
-              <div className="mt-8 relative">
-                <div className="flex gap-3">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      placeholder="Search by plan name, architect, or features..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-12 pr-6 py-4 rounded-2xl border-0 shadow-lg text-gray-700 placeholder-gray-500 focus:ring-4 focus:ring-green-500/20 focus:outline-none text-lg"
-                    />
-                  </div>
-                  
+            </div>
+          </div>
+
+          {/* Enhanced Category Navigation */}
+          <div className="mb-12">
+            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+              {categories.map((category) => {
+                const IconComponent = category.icon;
+                const isActive = activeCategory === category.id;
+                const categoryCount =
+                  category.id === "all"
+                    ? products.length
+                    : products.filter((p) => {
+                        if (category.id === "Residential")
+                          return p.subCategoryGroup?.includes("Residential");
+                        if (category.id === "Commercial")
+                          return p.subCategoryGroup?.includes("Commercial");
+                        if (category.id === "Social")
+                          return p.subCategoryGroup?.includes("Social");
+                        if (category.id === "Interior")
+                          return p.subCategoryGroup?.includes("Interior");
+                        if (category.id === "Renovation")
+                          return p.subCategoryGroup?.includes("Renovation");
+                        if (category.id === "Premium")
+                          return p.premium?.includes("Luxury");
+                        return false;
+                      }).length;
+
+                return (
                   <button
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-6 py-4 rounded-2xl transition-all duration-300 flex items-center gap-2 shadow-lg"
+                    key={category.id}
+                    onClick={() => setActiveCategory(category.id)}
+                    className={`flex-shrink-0 group relative overflow-hidden rounded-2xl transition-all duration-500 transform hover:scale-105 ${
+                      isActive
+                        ? "bg-white shadow-2xl scale-105"
+                        : "bg-white/80 hover:bg-white shadow-lg hover:shadow-xl"
+                    }`}
+                  >
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-br ${
+                        category.color
+                      } opacity-${
+                        isActive ? "20" : "10"
+                      } group-hover:opacity-20 transition-opacity`}
+                    ></div>
+                    <div className="relative p-6 min-w-[200px]">
+                      <div className="flex items-center justify-between mb-3">
+                        <div
+                          className={`p-3 rounded-xl bg-gradient-to-br ${category.color} text-white shadow-lg`}
+                        >
+                          <IconComponent className="w-6 h-6" />
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-gray-800">
+                            {categoryCount}
+                          </div>
+                          <div className="text-xs text-gray-500 font-medium">
+                            designs
+                          </div>
+                        </div>
+                      </div>
+                      <h3 className="font-bold text-gray-800 text-lg">
+                        {category.name}
+                      </h3>
+                      {isActive && (
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 to-blue-500 rounded-full"></div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex gap-8">
+            {/* Enhanced Filter Sidebar */}
+            <div
+              className={`${
+                showFilters ? "block" : "hidden"
+              } lg:block w-80 sticky top-4 h-[calc(100vh-1rem)] overflow-y-auto`}
+            >
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/50 overflow-hidden backdrop-blur-sm">
+                <div className="bg-gradient-to-r from-slate-50 via-green-50 to-blue-50 p-6 border-b border-slate-200/50">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                      <Filter className="w-5 h-5 text-green-600" />
+                      Filters
+                    </h2>
+                    <div className="flex items-center gap-3">
+                      {activeFiltersCount > 0 && (
+                        <button
+                          onClick={clearFilters}
+                          className="text-sm text-red-600 hover:text-red-700 font-bold transition-colors flex items-center gap-1"
+                        >
+                          <X className="w-4 h-4" />
+                          Clear All
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setShowFilters(false)}
+                        className="lg:hidden p-2 hover:bg-gray-200 rounded-xl transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 space-y-8 max-h-[calc(100vh-200px)] overflow-y-auto">
+                  {/* Premium Quick Filters */}
+                  <div>
+                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-yellow-500" />
+                      Premium Features
+                    </h3>
+                    <div className="space-y-4">
+                      {[
+                        {
+                          key: "featured",
+                          label: "Featured Plans",
+                          icon: Award,
+                          color: "text-yellow-500",
+                        },
+                        {
+                          key: "newListing",
+                          label: "New Releases",
+                          icon: Sparkles,
+                          color: "text-green-500",
+                        },
+                        {
+                          key: "customizable",
+                          label: "Customizable",
+                          icon: SlidersHorizontal,
+                          color: "text-blue-500",
+                        },
+                        {
+                          key: "premium",
+                          label: "Luxury Collection",
+                          icon: Crown,
+                          color: "text-purple-500",
+                        },
+                        {
+                          key: "quickDelivery",
+                          label: "Quick Delivery",
+                          icon: Flashlight,
+                          color: "text-orange-500",
+                        },
+                      ].map((filter) => (
+                        <label
+                          key={filter.key}
+                          className="flex items-center gap-3 cursor-pointer group p-3 rounded-xl hover:bg-gray-50 transition-all"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={filters[filter.key]}
+                            onChange={(e) =>
+                              setFilters({
+                                ...filters,
+                                [filter.key]: e.target.checked,
+                              })
+                            }
+                            className="w-5 h-5 text-green-600 rounded focus:ring-green-500 focus:ring-2"
+                          />
+                          <filter.icon className={`w-5 h-5 ${filter.color}`} />
+                          <span className="text-sm font-semibold text-gray-700 group-hover:text-green-600 transition-colors flex-1">
+                            {filter.label}
+                          </span>
+                          {filters[filter.key] && (
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Enhanced Price Range */}
+                  <div>
+                    <label className="block mb-4 font-bold text-gray-800 flex items-center gap-2">
+                      <span>💰</span>
+                      Price Range (KES)
+                    </label>
+                    <div className="space-y-4">
+                      <div className="flex gap-3">
+                        <input
+                          type="number"
+                          value={priceRange[0]}
+                          onChange={(e) =>
+                            setPriceRange([
+                              Number(e.target.value),
+                              priceRange[1],
+                            ])
+                          }
+                          className="w-1/2 p-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all font-medium"
+                          placeholder="Min"
+                        />
+                        <input
+                          type="number"
+                          value={priceRange[1]}
+                          onChange={(e) =>
+                            setPriceRange([
+                              priceRange[0],
+                              Number(e.target.value),
+                            ])
+                          }
+                          className="w-1/2 p-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all font-medium"
+                          placeholder="Max"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: "Under 100K", range: [0, 100000] },
+                          { label: "100K - 500K", range: [100000, 500000] },
+                          { label: "500K - 1M", range: [500000, 1000000] },
+                          { label: "1M+", range: [1000000, 10000000] },
+                        ].map((preset) => (
+                          <button
+                            key={preset.label}
+                            onClick={() => setPriceRange(preset.range)}
+                            className="text-xs bg-gray-100 hover:bg-green-100 text-gray-700 hover:text-green-700 px-3 py-2 rounded-lg transition-all font-medium"
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Enhanced Sort Options */}
+                  <div>
+                    <label className="block mb-4 font-bold text-gray-800 flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-blue-500" />
+                      Sort Results
+                    </label>
+                    <select
+                      className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all font-medium bg-white"
+                      value={sort}
+                      onChange={(e) => setSort(e.target.value)}
+                    >
+                      <option value="featured">🏆 Featured First</option>
+                      <option value="newest">✨ Newest Designs</option>
+                      <option value="popular">🔥 Most Popular</option>
+                      <option value="rating">⭐ Highest Rated</option>
+                      <option value="downloads">📥 Most Downloaded</option>
+                      <option value="price-low">💰 Price: Low to High</option>
+                      <option value="price-high">💎 Price: High to Low</option>
+                    </select>
+                  </div>
+
+                  {/* Advanced Filters Toggle */}
+                  <button
+                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                    className="w-full p-4 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-xl font-bold hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
                   >
                     <SlidersHorizontal className="w-5 h-5" />
-                    <span className="font-semibold">Filters</span>
-                    {activeFiltersCount > 0 && (
-                      <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                        {activeFiltersCount}
-                      </span>
-                    )}
+                    {showAdvancedFilters ? "Hide" : "Show"} Advanced Filters
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${
+                        showAdvancedFilters ? "rotate-180" : ""
+                      }`}
+                    />
                   </button>
-                  
-                  <div className="flex bg-white/20 backdrop-blur-sm rounded-2xl overflow-hidden shadow-lg">
+
+                  {/* Advanced Filters Panel */}
+                  {showAdvancedFilters && (
+                    <div className="space-y-6 p-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block mb-3 font-semibold text-gray-800">
+                            Min Rooms
+                          </label>
+                          <input
+                            type="number"
+                            value={filters.rooms}
+                            onChange={(e) =>
+                              setFilters({
+                                ...filters,
+                                rooms: Number(e.target.value),
+                              })
+                            }
+                            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all"
+                            placeholder="Any"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Enhanced Products Grid */}
+            <div className="flex-1">
+              {/* Results Header */}
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8 p-6 bg-white rounded-2xl shadow-lg border border-slate-200/50">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                    {filteredProducts.length} Premium Designs Found
+                  </h2>
+                  <p className="text-gray-600">
+                    {activeCategory === "all"
+                      ? "Showing all categories"
+                      : `Filtered by ${
+                          categories.find((c) => c.id === activeCategory)?.name
+                        }`}
+                    {searchQuery && ` • Search: "${searchQuery}"`}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-4 mt-4 lg:mt-0">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Eye className="w-4 h-4" />
+                    <span>Live results</span>
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  </div>
+
+                  <div className="flex bg-gray-100 rounded-xl p-1">
                     <button
-                      onClick={() => setViewMode('grid')}
-                      className={`p-4 transition-all duration-300 ${viewMode === 'grid' ? 'bg-white/30 text-white' : 'text-white/70 hover:text-white'}`}
+                      onClick={() => setViewMode("grid")}
+                      className={`p-3 rounded-lg transition-all duration-300 ${
+                        viewMode === "grid"
+                          ? "bg-white shadow-md text-green-600 scale-105"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
                     >
                       <Grid className="w-5 h-5" />
                     </button>
                     <button
-                      onClick={() => setViewMode('list')}
-                      className={`p-4 transition-all duration-300 ${viewMode === 'list' ? 'bg-white/30 text-white' : 'text-white/70 hover:text-white'}`}
+                      onClick={() => setViewMode("list")}
+                      className={`p-3 rounded-lg transition-all duration-300 ${
+                        viewMode === "list"
+                          ? "bg-white shadow-md text-green-600 scale-105"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
                     >
                       <List className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
 
-        <div className="flex gap-8">
-          {/* Enhanced Filter Sidebar */}
-          <div className={`${showFilters ? 'block' : 'hidden'} lg:block w-80 sticky top-4 h-fit`}>
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden">
-              <div className="bg-gradient-to-r from-slate-50 to-green-50 p-6 border-b border-slate-200/50">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-bold text-gray-800">Refine Your Search</h2>
-                  <div className="flex items-center gap-2">
-                    {activeFiltersCount > 0 && (
-                      <button 
-                        onClick={clearFilters}
-                        className="text-sm text-green-600 hover:text-green-700 font-semibold transition-colors"
-                      >
-                        Clear All
-                      </button>
-                    )}
-                    <button 
-                      onClick={() => setShowFilters(false)}
-                      className="lg:hidden p-1 hover:bg-gray-200 rounded-lg transition-colors"
+              {filteredProducts.length === 0 ? (
+                <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/50 p-16 text-center">
+                  <div className="w-32 h-32 bg-gradient-to-br from-green-100 via-blue-100 to-purple-100 rounded-full mx-auto mb-8 flex items-center justify-center">
+                    <Search className="w-16 h-16 text-green-600" />
+                  </div>
+                  <h3 className="text-3xl font-bold text-gray-800 mb-4">
+                    No Designs Found
+                  </h3>
+                  <p className="text-gray-600 mb-8 max-w-md mx-auto text-lg">
+                    We couldn't find any house plans matching your criteria. Try
+                    adjusting your filters or explore our featured collection.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button
+                      onClick={clearFilters}
+                      className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
                     >
-                      <X className="w-5 h-5" />
+                      Reset All Filters
+                    </button>
+                    <button
+                      onClick={() => setActiveCategory("featured")}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+                    >
+                      Browse Featured
                     </button>
                   </div>
                 </div>
-              </div>
-
-              <div className="p-6 space-y-8">
-                {/* Quick Filters */}
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-yellow-500" />
-                    Quick Filters
-                  </h3>
-                  <div className="space-y-3">
-                    <label className="flex items-center gap-3 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={filters.featured}
-                        onChange={(e) => setFilters({...filters, featured: e.target.checked})}
-                        className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+              ) : (
+                <>
+                  {filteredProducts.map((product, index) => (
+                    <div
+                      key={product._id || index}
+                      className="group transition-all duration-500 hover:scale-[1.02]"
+                    >
+                      <ProductCard
+                        product={product}
+                        isFavorite={favorites.has(product._id)}
+                        onToggleFavorite={() => toggleFavorite(product._id)}
+                        viewMode={viewMode}
+                        onQuickView={() => handleQuickView(product)}
+                        enhanced={true}
                       />
-                      <span className="text-sm font-medium text-gray-700 group-hover:text-green-600 transition-colors">
-                        Featured Plans
-                      </span>
-                      <Award className="w-4 h-4 text-yellow-500 ml-auto" />
-                    </label>
-                    
-                    <label className="flex items-center gap-3 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={filters.newListing}
-                        onChange={(e) => setFilters({...filters, newListing: e.target.checked})}
-                        className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
-                      />
-                      <span className="text-sm font-medium text-gray-700 group-hover:text-green-600 transition-colors">
-                        New Releases
-                      </span>
-                      <div className="w-2 h-2 bg-lime-500 rounded-full ml-auto animate-pulse"></div>
-                    </label>
-                    
-                    <label className="flex items-center gap-3 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={filters.customizable}
-                        onChange={(e) => setFilters({...filters, customizable: e.target.checked})}
-                        className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
-                      />
-                      <span className="text-sm font-medium text-gray-700 group-hover:text-green-600 transition-colors">
-                        Customizable
-                      </span>
-                      <SlidersHorizontal className="w-4 h-4 text-green-500 ml-auto" />
-                    </label>
-                  </div>
-                </div>
-
-                {/* Category Filter */}
-                <div>
-                  <label className="block mb-3 font-semibold text-gray-800">Building Type</label>
-                  <select
-                    className="w-full p-4 border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all"
-                    value={filters.category}
-                    onChange={(e) => setFilters({...filters, category: e.target.value})}
-                  >
-                    <option value="">All Categories</option>
-                    <option value="Commercial Projects">Commercial Buildings</option>
-                    <option value="Residential Projects">Residential Homes</option>
-                    <option value="Social Amenities Projects">Social Amenities</option>
-                  </select>
-                </div>
-
-                {/* Price Range */}
-                <div>
-                  <label className="block mb-3 font-semibold text-gray-800">Price Range (KES)</label>
-                  <div className="space-y-3">
-                    <div className="flex gap-3">
-                      <input
-                        type="number"
-                        value={priceRange[0]}
-                        onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
-                        className="w-1/2 p-4 border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all"
-                        placeholder="Min"
-                      />
-                      <input
-                        type="number"
-                        value={priceRange[1]}
-                        onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
-                        className="w-1/2 p-4 border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all"
-                        placeholder="Max"
-                      />
-                    </div>
-                    <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
-                      Popular: KES 50,000 - 500,000
-                    </div>
-                  </div>
-                </div>
-
-                {/* Area Range */}
-                <div>
-                  <label className="block mb-3 font-semibold text-gray-800">Floor Area (sqm)</label>
-                  <div className="flex gap-3">
-                    <input
-                      type="number"
-                      value={areaRange[0]}
-                      onChange={(e) => setAreaRange([Number(e.target.value), areaRange[1]])}
-                      className="w-1/2 p-4 border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all"
-                      placeholder="Min"
-                    />
-                    <input
-                      type="number"
-                      value={areaRange[1]}
-                      onChange={(e) => setAreaRange([areaRange[0], Number(e.target.value)])}
-                      className="w-1/2 p-4 border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all"
-                      placeholder="Max"
-                    />
-                  </div>
-                </div>
-
-                {/* Rooms & Floors */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-3 font-semibold text-gray-800">Min Rooms</label>
-                    <input
-                      type="number"
-                      value={filters.rooms}
-                      onChange={(e) => setFilters({...filters, rooms: e.target.value})}
-                      className="w-full p-4 border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all"
-                      placeholder="Any"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block mb-3 font-semibold text-gray-800">Min Floors</label>
-                    <input
-                      type="number"
-                      value={filters.floors}
-                      onChange={(e) => setFilters({...filters, floors: e.target.value})}
-                      className="w-full p-4 border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all"
-                      placeholder="Any"
-                    />
-                  </div>
-                </div>
-
-                {/* Sort Options */}
-                <div>
-                  <label className="block mb-3 font-semibold text-gray-800">Sort By</label>
-                  <select
-                    className="w-full p-4 border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all"
-                    value={sort}
-                    onChange={(e) => setSort(e.target.value)}
-                  >
-                    <option value="featured">Featured First</option>
-                    <option value="newest">Newest Designs</option>
-                    <option value="popular">Most Popular</option>
-                    <option value="rating">Highest Rated</option>
-                    <option value="price-low">Price: Low to High</option>
-                    <option value="price-high">Price: High to Low</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Products Grid */}
-          <div className="flex-1">
-            {filteredProducts.length === 0 ? (
-              <div className="bg-white rounded-2xl shadow-xl border border-slate-200/50 p-12 text-center">
-                <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-lime-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-                  <Search className="w-12 h-12 text-green-600" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-800 mb-3">No Plans Found</h3>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  We couldn't find any house plans matching your criteria. Try adjusting your filters or explore our featured collection.
-                </p>
-                <button
-                  onClick={clearFilters}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                >
-                  Reset All Filters
-                </button>
-              </div>
-            ) : (
-              <div className={viewMode === 'grid' 
-                ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8" 
-                : "space-y-6"
-              }>
-                {filteredProducts.map((product, index) => (
-                  <div key={product.id || index}>
-                    <ProductCard 
-                      product={product} 
-                      isFavorite={favorites.has(product.id)}
-                      onToggleFavorite={() => toggleFavorite(product.id)}
-                      viewMode={viewMode}
-                      onQuickView={() => setShowQuickView(product)}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Quick View Modal */}
-        {showQuickView && (
-          <QuickViewModal 
-            product={showQuickView} 
-            onClose={() => setShowQuickView(null)}
-            isFavorite={favorites.has(showQuickView.id)}
-            onToggleFavorite={() => toggleFavorite(showQuickView.id)}
-          />
-        )}
-      </div>
-    </div>
-  );
-};
-
-const ProductCard = ({ product, isFavorite, onToggleFavorite, viewMode, onQuickView }) => {
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const navigate = useNavigate();
-
-  const handleImageClick = (e) => {
-    const isInteractiveElement = e.target.closest('button, a, [role="button"]');
-      if (!isInteractiveElement) {
-          navigate(`/product/${product.id}`);
-      }
-  };
-
-  const handleQuickBuy = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    navigate(`/quick-buy/${product.id}`);
-
-  };
-  const handleQuickView = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onQuickView();
-  };
-
-  if (viewMode === 'list') {
-    return (
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200/50 overflow-hidden hover:shadow-2xl transition-all duration-500 group">
-        <div className="flex">
-          <div className="w-80 h-48 bg-gradient-to-br from-green-100 to-lime-100 relative overflow-hidden">
-            <img
-              onClick={handleImageClick}
-              src={product.finalImageURLs?.[0] || ''}
-              alt={product.title}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-              onLoad={() => setImageLoaded(true)}
-            />
-            {product.featured && (
-              <div className="absolute top-4 left-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                <Award className="w-3 h-3 inline mr-1" />
-                FEATURED
-              </div>
-            )}
-            {product.newListing && (
-              <div className="absolute top-4 right-4 bg-gradient-to-r from-lime-400 to-emerald-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                NEW
-              </div>
-            )}
-          </div>
-          
-          <div className="flex-1 p-6 flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-1 group-hover:text-green-600 transition-colors">
-                    {product.title || "Premium House Plan"}
-                  </h3>
-                  <p className="text-gray-600 text-sm">by {product.architect}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onToggleFavorite();
-                    }}
-                    className={`p-2 rounded-full transition-all duration-300 ${
-                      isFavorite 
-                        ? 'bg-red-100 text-red-600 hover:bg-red-200' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-600'
-                    }`}
-                  >
-                    <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
-                  </button>
-                  <button className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-green-100 hover:text-green-600 transition-all duration-300">
-                    <Share2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-4 gap-4 mb-4">
-                <div className="text-center">
-                  <Bed className="w-5 h-5 text-green-600 mx-auto mb-1" />
-                  <span className="text-sm font-semibold text-gray-800">{product.rooms || "-"}</span>
-                  <p className="text-xs text-gray-600">Rooms</p>
-                </div>
-                <div className="text-center">
-                  <Building className="w-5 h-5 text-green-600 mx-auto mb-1" />
-                  <span className="text-sm font-semibold text-gray-800">{product.floorCount || "-"}</span>
-                  <p className="text-xs text-gray-600">Floors</p>
-                </div>
-                <div className="text-center">
-                  <Square className="w-5 h-5 text-green-600 mx-auto mb-1" />
-                  <span className="text-sm font-semibold text-gray-800">{product.area ? `${product.area.toFixed(0)}` : "-"}</span>
-                  <p className="text-xs text-gray-600">sqm</p>
-                </div>
-                <div className="text-center">
-                  <Star className="w-5 h-5 text-yellow-500 mx-auto mb-1" />
-                  <span className="text-sm font-semibold text-gray-800">{product.rating}</span>
-                  <p className="text-xs text-gray-600">Rating</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <div>
-                <span className="text-2xl font-bold text-green-600 to-emerald-600 bg-clip-text text-transparent">
-                  {product.price ? `KES ${product.price.toLocaleString()}` : "Contact for Price"}
-                </span>
-                <p className="text-sm text-gray-600">Delivery: {product.completionTime}</p>
-              </div>
-              
-              <div className="flex gap-2">
-
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onQuickView();
-                  }}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-300 text-sm font-semibold"
-                >
-                  Quick View
-                </button>
-                <Link
-                  to={`/product/${product.id}`}
-                  className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
-                >
-                  View Details
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div 
-      className="group relative bg-white rounded-2xl shadow-lg border border-slate-200/50 overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:scale-[1.02]"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Image Container */}
-      <div className="relative h-64 bg-gradient-to-br from-green-100 to-lime-100 overflow-hidden"
-      onClick={handleImageClick}
-      >
-        <img
-          src={product.finalImageURLs?.[0] || ''}
-          alt={product.title}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-          onLoad={() => setImageLoaded(true)}
-        />
-        
-        {/* Overlay with Quick Actions */}
-        <div className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-            <div className="flex gap-2">
-              <button
-                onClick={handleQuickView}
-               className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-all duration-300 text-sm font-semibold"
-              >
-               <Eye className="w-4 h-4 inline mr-1" />
-                Quick View
-              </button>
-              
-              <button className="bg-white/20 backdrop-blur-sm text-white p-2 rounded-lg hover:bg-white/30 transition-all duration-300">
-                <Download className="w-4 h-4" />
-              </button>
-            </div>
-            
-            <div className="flex gap-2">
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  onToggleFavorite();
-                }}
-                className={`p-2 rounded-lg transition-all duration-300 ${
-                  isFavorite 
-                    ? 'bg-red-500 text-white' 
-                    : 'bg-white/20 backdrop-blur-sm text-white hover:bg-red-500'
-                }`}
-              >
-                <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
-              </button>
-              <button className="bg-white/20 backdrop-blur-sm text-white p-2 rounded-lg hover:bg-green-500 transition-all duration-300">
-                <Share2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Status Badges */}
-        <div className="absolute top-4 left-4 flex flex-col gap-2">
-          {product.featured && (
-            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
-              <Award className="w-3 h-3" />
-              FEATURED
-            </div>
-          )}
-          {product.newListing && (
-            <div className="bg-gradient-to-r from-lime-400 to-emerald-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-              NEW
-            </div>
-          )}
-          {product.customizable && (
-            <div className="bg-gradient-to-r from-emerald-400 to-teal-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-              CUSTOMIZABLE
-            </div>
-          )}
-        </div>
-
-        {/* Rating Badge */}
-        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1">
-          <Star className="w-3 h-3 text-yellow-500 fill-current" />
-          <span className="text-xs font-semibold text-gray-800">{product.rating}</span>
-        </div>
-      </div>
-
-      {/* Card Content */}
-      <div className="p-6">
-        <div className="mb-4">
-          <h3 className="text-lg font-bold text-gray-800 mb-1 group-hover:text-green-600 transition-colors line-clamp-1">
-            {product.title || "Premium House Plan"}
-          </h3>
-          <p className="text-sm text-gray-600 mb-2">by {product.architect}</p>
-          
-          <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
-            <span className="flex items-center gap-1">
-              <Eye className="w-3 h-3" />
-              {product.views} views
-            </span>
-            <span className="flex items-center gap-1">
-              <Heart className="w-3 h-3" />
-              {product.saved} saved
-            </span>
-          </div>
-        </div>
-
-        {/* Property Features */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="text-center bg-green-50 rounded-lg p-2">
-            <Bed className="w-4 h-4 text-green-600 mx-auto mb-1" />
-            <span className="text-sm font-semibold text-gray-800 block">{product.rooms || "-"}</span>
-            <span className="text-xs text-gray-600">Rooms</span>
-          </div>
-          <div className="text-center bg-lime-50 rounded-lg p-2">
-            <Building className="w-4 h-4 text-lime-600 mx-auto mb-1" />
-            <span className="text-sm font-semibold text-gray-800 block">{product.floorCount || "-"}</span>
-            <span className="text-xs text-gray-600">Floors</span>
-          </div>
-          <div className="text-center bg-emerald-50 rounded-lg p-2">
-            <Square className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
-            <span className="text-sm font-semibold text-gray-800 block">{product.area ? `${product.area.toFixed(0)}` : "-"}</span>
-            <span className="text-xs text-gray-600">sqm</span>
-          </div>
-        </div>
-
-        {/* Price and Action */}
-        <div className="flex justify-between items-center w-full">
-       <div className="min-w-0">
-       <span className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent block break-words">
-       {product.price ? `KES ${product.price.toLocaleString()}` : "Contact"}
-       </span>
-       <p className="text-xs text-gray-600">{product.completionTime}</p>
-       </div>
-
-          
-          <Link
-            to={`/product/${product.id}`}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2 text-sm"
-          >
-            View Plan
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-
-          <button
-            onClick={handleQuickBuy}
-            className="bg-lime-600 text-white px-4 py-2 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2 text-sm"
-          >
-            Quick Buy
-            <Zap className="w-4 h-4" />
-          </button>
-
-        </div>
-
-        {/* What's Included */}
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <p className="text-xs text-gray-600 mb-2">Includes:</p>
-          <div className="flex flex-wrap gap-1">
-            {product.includes?.slice(0, 2).map((item, index) => (
-              <span key={index} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                {item}
-              </span>
-            ))}
-            {product.includes?.length > 2 && (
-              <span className="text-xs text-green-600 font-semibold">
-                +{product.includes.length - 2} more
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const QuickViewModal = ({ product, onClose, isFavorite, onToggleFavorite }) => {
-      const navigate = useNavigate();
-      
-      const handleQuickBuy = (e) => {
-        onClose();
-        navigate(`/quick-buy/${product.id}`);
-      };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-green-50 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center rounded-t-3xl">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-            Quick Preview
-          </h2>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onToggleFavorite}
-              className={`p-3 rounded-full transition-all duration-300 ${
-                isFavorite 
-                  ? 'bg-red-100 text-red-600 hover:bg-red-200' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-600'
-              }`}
-            >
-              <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
-            </button>
-            <button
-              onClick={onClose}
-              className="p-3 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Image Section */}
-            <div className="space-y-4">
-              <div className="h-80 bg-gradient-to-br from-green-100 to-lime-100 rounded-2xl overflow-hidden relative">
-                <img
-                  src={product.finalImageURLs?.[0] || ''}
-                  alt={product.title}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute top-4 left-4 flex flex-col gap-2">
-                  {product.featured && (
-                    <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
-                      <Award className="w-3 h-3" />
-                      FEATURED
-                    </div>
-                  )}
-                  {product.newListing && (
-                    <div className="bg-gradient-to-r from-lime-400 to-emerald-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                      NEW
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Additional Images */}
-              <div className="grid grid-cols-3 gap-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-20 bg-gray-100 rounded-lg overflow-hidden">
-                    <img
-                      src={product.finalImageURLs?.[i] || ''}
-                      alt={`View ${i + 1}`}
-                      className="w-full h-full object-cover hover:scale-110 transition-transform duration-300 cursor-pointer"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Details Section */}
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-2xl font-bold text-gray-800 mb-2">
-                  {product.title || "Premium House Plan"}
-                </h3>
-                <p className="text-gray-600 mb-4">Designed by {product.architect}</p>
-                
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                    <span className="font-semibold">{product.rating}</span>
-                    <span className="text-gray-600 text-sm">(125 reviews)</span>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {product.views} views • {product.saved} saved
-                  </div>
-                </div>
-
-                <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
-                  {product.price ? `KES ${product.price.toLocaleString()}` : "Contact for Price"}
-                </div>
-                <p className="text-gray-600">Delivery: {product.completionTime}</p>
-              </div>
-
-              {/* Features Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-green-50 rounded-xl p-4 text-center">
-                  <Bed className="w-6 h-6 text-green-600 mx-auto mb-2" />
-                  <span className="text-lg font-bold text-gray-800 block">{product.rooms || "-"}</span>
-                  <span className="text-sm text-gray-600">Bedrooms</span>
-                </div>
-                <div className="bg-lime-50 rounded-xl p-4 text-center">
-                  <Bath className="w-6 h-6 text-lime-600 mx-auto mb-2" />
-                  <span className="text-lg font-bold text-gray-800 block">{Math.ceil((product.rooms || 0) * 0.75)}</span>
-                  <span className="text-sm text-gray-600">Bathrooms</span>
-                </div>
-                <div className="bg-emerald-50 rounded-xl p-4 text-center">
-                  <Building className="w-6 h-6 text-emerald-600 mx-auto mb-2" />
-                  <span className="text-lg font-bold text-gray-800 block">{product.floorCount || "-"}</span>
-                  <span className="text-sm text-gray-600">Floors</span>
-                </div>
-                <div className="bg-teal-50 rounded-xl p-4 text-center">
-                  <Square className="w-6 h-6 text-teal-600 mx-auto mb-2" />
-                  <span className="text-lg font-bold text-gray-800 block">{product.area ? `${product.area.toFixed(0)}` : "-"}</span>
-                  <span className="text-sm text-gray-600">sqm</span>
-                </div>
-              </div>
-
-              {/* What's Included */}
-              <div>
-                <h4 className="font-semibold text-gray-800 mb-3">What's Included:</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  {product.includes?.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-lime-500 rounded-full"></div>
-                      <span className="text-sm text-gray-700">{item}</span>
                     </div>
                   ))}
-                </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <Link
-                  to={`/product/${product.id}`}
-                  className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 px-6 rounded-xl font-semibold text-center hover:shadow-lg transition-all duration-300 transform hover:scale-105"
-                >
-                  View Full Details
-                </Link>
-                <button
-                onClick={handleQuickBuy}
-                 className="bg-lime-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-lime-700 transition-colors flex items-center gap-2">
-                  <Zap className="w-4 h-4" />
-                  Quick Buy
-                </button>
-                <button>
-                  <Phone className="w-4 h-4" />
-                  Contact
-                </button>
-              </div>
+                  {/* Load More / Pagination */}
+                  {filteredProducts.length >= 12 && (
+                    <div className="mt-16 text-center">
+                      <div className="bg-white rounded-2xl shadow-xl border border-slate-200/50 p-8">
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">
+                          Showing {Math.min(filteredProducts.length, 12)} of{" "}
+                          {filteredProducts.length} designs
+                        </h3>
+                        <button className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2 mx-auto">
+                          <ArrowRight className="w-5 h-5" />
+                          Load More Designs
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-              {/* Contact Info */}
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4">
-                <h4 className="font-semibold text-gray-800 mb-2">Need Help?</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-green-600" />
-                    <span>+254 763 831806</span>
+                  {/* Call to Action Section */}
+                  <div className="mt-16 bg-gradient-to-r from-white-600 to-white-700 rounded-3xl shadow-2xl text-green-600 p-12 text-center overflow-hidden relative">
+                    <div className="absolute inset-0 opacity-20">
+                      <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl animate-pulse"></div>
+                      <div className="absolute bottom-10 right-10 w-24 h-24 bg-yellow-300/20 rounded-full blur-lg animate-bounce"></div>
+                    </div>
+
+                    <div className="relative z-10">
+                      <h2 className="text-4xl font-bold mb-4">
+                        Can't Find Your Dream Design?
+                      </h2>
+                      <p className="text-xl text-green-600 mb-8 max-w-2xl mx-auto">
+                        Our expert architects are ready to create a custom
+                        design just for you. Get started today!
+                      </p>
+
+                      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                        <button
+                          onClick={() => navigate("/custom-design")}
+                          className="bg-white text-green-600 px-8 py-4 rounded-xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
+                        >
+                          <Pencil className="w-5 h-5" />
+                          Request Custom Design
+                        </button>
+                        <button className="bg-white/20 backdrop-blur-sm text-green-600 px-8 py-4 rounded-xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                          <Mail className="w-5 h-5" />
+                          Contact Architect
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-green-600" />
-                    <span>HillersonsCompany@gmail.com</span>
-                  </div>
-                </div>
-              </div>
+                </>
+              )}
             </div>
           </div>
+
+          {/* Footer */}
+          <Footer />
+
+          {/*Quick View Modal */}
+          {showQuickView && quickViewPlan && (
+            <QuickViewModal
+              product={{
+                ...quickViewPlan,
+                bedrooms: quickViewPlan.rooms,
+                floorCount: quickViewPlan.floorCount,
+              }}
+              isOpen={showQuickView}
+              onClose={() => setShowQuickView(false)}
+            />
+          )}
         </div>
       </div>
     </div>
