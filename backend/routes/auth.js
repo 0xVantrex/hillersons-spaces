@@ -10,7 +10,7 @@ const crypto = require("crypto");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const verifyToken = require("../middleware/auth");
 
-// 📌 Google Signup/Login
+//  Google Signup / login
 router.post("/google", async (req, res) => {
   console.log("Google auth request received", req.body);
   const { tokenId } = req.body;
@@ -29,7 +29,7 @@ router.post("/google", async (req, res) => {
       user = new User({
         email,
         name,
-        password: "", // No password for Google users
+        password: "",
       });
       await user.save();
     }
