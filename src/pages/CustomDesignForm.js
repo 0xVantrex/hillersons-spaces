@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { API_BASE_URL } from "../lib/api";
+import { useProjects } from "../context/ProjectsContext";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
 const CustomDesignForm = () => {
+  const { projects } = useProjects();
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -101,6 +103,7 @@ const CustomDesignForm = () => {
         setSearchQuery={setSearchQuery}
         showMobileMenu={showMobileMenu}
         setShowMobileMenu={setShowMobileMenu}
+        projects={projects}
       />
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-12">

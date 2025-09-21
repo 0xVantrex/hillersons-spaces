@@ -11,10 +11,13 @@ import {
   Star,
   ArrowRight,
 } from "lucide-react";
+import { API_BASE_URL } from "../lib/api";
+import { useProjects } from "../context/ProjectsContext";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
 const AboutUsPage = () => {
+  const { projects } = useProjects();
   const [isVisible, setIsVisible] = useState(false);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [showSearch, setShowSearch] = useState(false);
@@ -87,6 +90,7 @@ const AboutUsPage = () => {
         showMobileMenu={showMobileMenu}
         setShowMobileMenu={setShowMobileMenu}
         setShowSearch={setShowSearch}
+        projects={projects}
       />
 
       {/* Hero Section */}

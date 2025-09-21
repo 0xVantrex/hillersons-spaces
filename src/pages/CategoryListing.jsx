@@ -2,13 +2,15 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../lib/api";
+import { useProjects } from "../context/ProjectsContext";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
 const CategoryListing = () => {
+  const { projects } = useProjects();
   const { subCategoryGroup, subCategory } = useParams();
   const navigate = useNavigate();
-  const [projects, setProjects] = useState([]);
+  const [setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sortBy, setSortBy] = useState("newest");
@@ -125,6 +127,7 @@ const CategoryListing = () => {
         showMobileMenu={showMobileMenu}
         setShowMobileMenu={setShowMobileMenu}
         setShowSearch={setShowSearch}
+        projects={projects}
       />
       {/* Hero Section with Background Image */}
       <div

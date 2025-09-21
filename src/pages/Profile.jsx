@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../lib/api";
+import { useProjects } from "../context/ProjectsContext";
 import { Navigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
 export default function ProfilePage() {
+  const { projects } = useProjects();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -162,6 +164,7 @@ export default function ProfilePage() {
         searchQuery={searchQuery}
         showMobileMenu={showMobileMenu}
         setShowMobileMenu={setShowMobileMenu}
+        projects={projects}
       />
       <div className="bg-gradient-to-r from-emerald-600 to-lime-500 rounded-2xl p-6 shadow-xl">
         <div className="flex items-center justify-between">

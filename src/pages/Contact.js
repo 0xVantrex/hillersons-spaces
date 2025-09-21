@@ -13,10 +13,13 @@ import {
   Award,
   Users,
 } from "lucide-react";
+import { API_BASE_URL } from "../lib/api";
+import { useProjects } from "../context/ProjectsContext";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
 const Contact = () => {
+  const { projects } = useProjects();
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -126,6 +129,7 @@ const Contact = () => {
         showMobileMenu={showMobileMenu}
         setShowMobileMenu={setShowMobileMenu}
         setShowSearch={setShowSearch}
+        projects={projects}
       />
       {/* Hero Section with Enhanced Animation */}
       <section className="relative py-24 text-center overflow-hidden">
