@@ -33,13 +33,25 @@ const Header = ({
 }) => {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
+
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("resize", checkMobile);
+    checkMobile(); // Initial check
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", checkMobile);
+    };
   }, []);
 
   const handleNavigation = (path) => {
@@ -65,7 +77,10 @@ const Header = ({
         <div className="container mx-auto px-4 lg:px-6">
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Logo - Responsive */}
-            <div className="flex items-center gap-2 lg:gap-4 group cursor-pointer flex-shrink-0">
+            <div
+              className="flex items-center gap-2 lg:gap-4 group cursor-pointer flex-shrink-0"
+              onClick={() => handleNavigation("/")}
+            >
               <div className="relative">
                 <div className="bg-gradient-to-br from-emerald-600 via-emerald-700 to-lime-600 text-white p-2 lg:p-4 rounded-xl lg:rounded-2xl shadow-2xl group-hover:shadow-emerald-300/40 transition-all duration-500 group-hover:scale-105">
                   <Building className="w-5 h-5 lg:w-8 lg:h-8" />
@@ -124,10 +139,18 @@ const Header = ({
               {/* Contact Dropdown */}
               <div
                 className="relative"
-                onMouseEnter={() => setActiveDropdown("Contact")}
-                onMouseLeave={() => setActiveDropdown(null)}
+                onMouseEnter={() => !isMobile && setActiveDropdown("Contact")}
+                onMouseLeave={() => !isMobile && setActiveDropdown(null)}
               >
-                <button className="flex items-center gap-2 px-3 xl:px-5 py-2 xl:py-3 text-slate-700 font-medium hover:text-lime-600 transition duration-300 rounded-xl hover:bg-gradient-to-r hover:from-lime-50 hover:to-emerald-50 group text-sm xl:text-base">
+                <button
+                  className="flex items-center gap-2 px-3 xl:px-5 py-2 xl:py-3 text-slate-700 font-medium hover:text-lime-600 transition duration-300 rounded-xl hover:bg-gradient-to-r hover:from-lime-50 hover:to-emerald-50 group text-sm xl:text-base"
+                  onClick={() =>
+                    isMobile &&
+                    setActiveDropdown(
+                      activeDropdown === "Contact" ? null : "Contact"
+                    )
+                  }
+                >
                   <Phone className="w-4 h-4 group-hover:scale-110 transition-transform" />
                   Contact
                   <ChevronDown
@@ -153,7 +176,7 @@ const Header = ({
                             fill="white"
                             className="w-5 h-5"
                           >
-                            <path d="M20.52 3.48A11.949 11.949 0 0012 0C5.373 0 .001 5.373.001 12c0 2.121.657 4.084 1.779 5.722L0 24l6.378-1.675A11.949 11.949 0 0012 24c6.627 0 12-5.373 12-12 0-3.195-1.246-6.198-3.48-8.52zM12 22c-1.905 0-3.713-.612-5.205-1.654l-.372-.22-3.787.995.997-3.692-.242-.374A9.958 9.958 0 012 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10zm5.338-7.667c-.297-.149-1.758-.867-2.031-.967-.273-.1-.472-.149-.672.15-.198.297-.767.966-.941 1.164-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.447-.52.151-.174.2-.298.3-.497.1-.198.05-.372-.025-.52-.075-.149-.672-1.612-.921-2.206-.242-.579-.487-.5-.672-.51l-.573-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                            <path d="M20.52 3.48A11.949 11.949 0 0012 0C5.373 0 .001 5.373.001 12c0 2.121.657 4.084 1.779 5.722L0 24l6.378-1.675A11.949 11.949 0 0012 24c6.627 0 12-5.373 12-12 0-3.195-1.246-6.198-3.48-8.52zM12 22c-1.905 0-3.713-.612-5.205-1.654l-.372-.22-3.787.995.997-3.692-.242-.374A9.958 9.958 0 012 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10zm5.338-7.667c-.297-.149-1.758-.867-2.031-.967-.273-.1-.472-.149-.672.15-.198.297-.767.966-.941 1.164-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.447-.520.151-.174.2-.298.3-.497.1-.198.05-.372-.025-.520-.075-.149-.672-1.612-.921-2.206-.242-.579-.487-.5-.672-.51l-.573-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
                           </svg>
                         </span>
                         <span className="text-slate-700 font-medium">
@@ -222,10 +245,18 @@ const Header = ({
               {/* Services Dropdown */}
               <div
                 className="relative"
-                onMouseEnter={() => setActiveDropdown("services")}
-                onMouseLeave={() => setActiveDropdown(null)}
+                onMouseEnter={() => !isMobile && setActiveDropdown("services")}
+                onMouseLeave={() => !isMobile && setActiveDropdown(null)}
               >
-                <button className="flex items-center gap-2 px-3 xl:px-5 py-2 xl:py-3 text-slate-700 font-medium hover:text-lime-600 transition duration-300 rounded-xl hover:bg-gradient-to-r hover:from-lime-50 hover:to-emerald-50 group text-sm xl:text-base">
+                <button
+                  className="flex items-center gap-2 px-3 xl:px-5 py-2 xl:py-3 text-slate-700 font-medium hover:text-lime-600 transition duration-300 rounded-xl hover:bg-gradient-to-r hover:from-lime-50 hover:to-emerald-50 group text-sm xl:text-base"
+                  onClick={() =>
+                    isMobile &&
+                    setActiveDropdown(
+                      activeDropdown === "services" ? null : "services"
+                    )
+                  }
+                >
                   <Sparkles className="w-4 h-4 group-hover:scale-110 transition-transform" />
                   Services
                   <ChevronDown
@@ -235,7 +266,10 @@ const Header = ({
                   />
                 </button>
                 {activeDropdown === "services" && (
-                  <div className="absolute left-0 top-full mt-3 w-[380px] xl:w-[420px] bg-white rounded-2xl shadow-2xl py-6 xl:py-8 border border-slate-200/60 z-40">
+                  <div
+                    className="absolute left-0 top-full mt-3 w-[380px] xl:w-[420px] bg-white rounded-2xl shadow-2xl py-6 xl:py-8 border border-slate-200/60 z-40
+               max-h-[70vh] overflow-y-auto"
+                  >
                     <div className="px-6 xl:px-8 pb-4 xl:pb-6 border-b border-slate-100">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="w-6 h-6 xl:w-8 xl:h-8 bg-gradient-to-br from-emerald-500 to-lime-600 rounded-lg flex items-center justify-center">
@@ -418,7 +452,10 @@ const Header = ({
           )}
           {/* Mobile Menu */}
           {showMobileMenu && (
-            <div className="lg:hidden bg-white/98 rounded-2xl shadow-2xl my-4 py-6 border border-slate-200/60">
+            <div
+              className="lg:hidden bg-white/98 rounded-2xl shadow-2xl my-4 py-6 border border-slate-200/60
+                  max-h-[80vh] overflow-y-auto"
+            >
               <div className="px-6 space-y-1">
                 {/* Top nav links */}
                 {[
@@ -461,7 +498,7 @@ const Header = ({
                           fill="white"
                           className="w-5 h-5"
                         >
-                          <path d="M20.52 3.48A11.949 11.949 0 0012 0C5.373 0 .001 5.373.001 12c0 2.121.657 4.084 1.779 5.722L0 24l6.378-1.675A11.949 11.949 0 0012 24c6.627 0 12-5.373 12-12 0-3.195-1.246-6.198-3.48-8.52zM12 22c-1.905 0-3.713-.612-5.205-1.654l-.372-.22-3.787.995.997-3.692-.242-.374A9.958 9.958 0 012 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10zm5.338-7.667c-.297-.149-1.758-.867-2.031-.967-.273-.1-.472-.149-.672.15-.198.297-.767.966-.941 1.164-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.447-.52.151-.174.2-.298.3-.497.1-.198.05-.372-.025-.52-.075-.149-.672-1.612-.921-2.206-.242-.579-.487-.5-.672-.51l-.573-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                          <path d="M20.52 3.48A11.949 11.949 0 0012 0C5.373 0 .001 5.373.001 12c0 2.121.657 4.084 1.779 5.722L0 24l6.378-1.675A11.949 11.949 0 0012 24c6.627 0 12-5.373 12-12 0-3.195-1.246-6.198-3.48-8.52zM12 22c-1.905 0-3.713-.612-5.205-1.654l-.372-.22-3.787.995.997-3.692-.242-.374A9.958 9.958 0 012 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10zm5.338-7.667c-.297-.149-1.758-.867-2.031-.967-.273-.1-.472-.149-.672.150-.198.297-.767.966-.941 1.164-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.130-.606.134-.133.298-.347.447-.520.151-.174.200-.298.300-.497.100-.198.050-.372-.025-.520-.075-.149-.672-1.612-.921-2.206-.242-.579-.487-.500-.672-.510l-.573-.010c-.198 0-.520.074-.792.372s-1.040 1.016-1.040 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.200 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.360.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.570-.347z" />
                         </svg>
                       </span>
                       <span className="text-slate-700 font-medium">
@@ -470,9 +507,22 @@ const Header = ({
                       </span>
                     </a>
 
+                    {/*Email*/}
+                    <a
+                      href="mailto:HillersonsDesigns@gmail.com"
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-gradient-to-r hover:from-lime-50 hover:to-emerald-50 rounded-xl transition-all duration-300"
+                    >
+                      <span className="bg-gradient-to-br from-blue-500 to-cyan-600 p-2 rounded-lg">
+                        <Mail className="w-5 h-5 text-white" />
+                      </span>
+                      <span className="text-slate-700 font-medium">
+                        Email Us
+                      </span>
+                    </a>
+
                     {/*Location*/}
                     <a
-                      href="https://goo.gl/maps/YourOfficeLocation"
+                      href="https://www.google.com/maps/place/Rehema+House,+6th+floor+Standard+St,+Nairobi/@-1.2847631,36.8228179,21z/data=!4m6!3m5!1s0x182f10d65b59080d:0x2ea5107c8248e808!8m2!3d-1.2847285!4d36.8229559!16s%2Fg%2F11l5hn9x7x?entry=ttu&g_ep=EgoyMDI5MDkxNi4wIKXMDSoASAFQAw%3D%3D"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 px-4 py-3 hover:bg-gradient-to-r hover:from-lime-50 hover:to-emerald-50 rounded-xl transition-all duration-300"
