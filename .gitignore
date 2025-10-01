@@ -27,3 +27,4 @@ dist/
 .vscode/
 .DS_Store
 *.log
+backend/node_modules/
