@@ -5,13 +5,14 @@ require("dotenv").config();
 
 const app = express();
 
-// -----------------------------
+
 // Middleware
-// -----------------------------
+
 const allowedOrigins = [
-  "http://localhost:3000", // for local dev
-  "http://192.168.8.113:3000", // replace with your desktop IP
+  "http://localhost:5173", 
+  "http://192.168.8.113:5173"
 ];
+
 
 app.use(
   cors({
@@ -23,9 +24,8 @@ app.use(
 
 app.use(express.json());
 
-// -----------------------------
 // Routes
-// -----------------------------
+
 const authRoutes = require("./routes/auth");
 app.use("/api/auth", authRoutes);
 
@@ -50,16 +50,15 @@ app.use("/api/categories", categoryRoutes);
 const projects = require("./routes/projects");
 app.use("/api/projects", projects);
 
-// -----------------------------
+
 // Test route
-// -----------------------------
+
 app.get("/", (req, res) => {
   res.send("🔥 Backend API is up and running");
 });
 
-// -----------------------------
 // Mongo + Server boot
-// -----------------------------
+
 const PORT = process.env.PORT || 5000;
 
 mongoose
