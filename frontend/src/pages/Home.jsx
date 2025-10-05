@@ -270,7 +270,6 @@ const HomePage = () => {
 
   return (
     <div className="bg-gradient-to-b from-emerald-50 via-lime-50 to-white overflow-x-hidden">
-      console.log("Projects:", projects);
       <Header
         showSearch={showSearch}
         searchQuery={searchQuery}

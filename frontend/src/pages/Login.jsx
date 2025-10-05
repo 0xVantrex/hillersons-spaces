@@ -17,8 +17,6 @@ import ForgotPassword from "../components/ForgotPassword";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 
-<ForgotPassword />;
-
 export default function Login() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
@@ -161,7 +159,10 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-lime-50 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated Background Elements */}
+      
+      <ForgotPassword />
+
+      {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-4 -left-4 w-72 h-72 bg-gradient-to-r from-green-400/20 to-lime-400/20 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute -bottom-4 -right-4 w-96 h-96 bg-gradient-to-r from-lime-400/20 to-green-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
