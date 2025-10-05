@@ -1,3 +1,4 @@
+// src/main.jsx
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
@@ -6,9 +7,9 @@ import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { Toaster } from "react-hot-toast";
 import { CartProvider } from "./context/CartContext";
-import reportWebVitals from "./reportWebVitals";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { SearchProvider } from "./context/SearchContext";
+import { ProjectsProvider } from "./context/ProjectsContext"; // Import ProjectsProvider
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -18,8 +19,10 @@ root.render(
         <AuthProvider>
           <SearchProvider>
             <CartProvider>
-              <App />
-              <Toaster position="top-right" />
+              <ProjectsProvider> 
+                <App />
+                <Toaster position="top-right" />
+              </ProjectsProvider>
             </CartProvider>
           </SearchProvider>
         </AuthProvider>
@@ -27,6 +30,3 @@ root.render(
     </GoogleOAuthProvider>
   </React.StrictMode>
 );
-
-reportWebVitals();
-

@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dummy usage to prevent purging */
+.bg-emerald-50 {
+  background-color: #ecfdf5;
+}
+.bg-lime-800 {
+  background-color: #3f6212;
+}
