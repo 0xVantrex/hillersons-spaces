@@ -35,48 +35,25 @@ const AboutUsPage = () => {
   const stats = [
     { number: "500+", label: "Designs Created", icon: Building2 },
     { number: "98%", label: "Client Satisfaction", icon: Star },
-    { number: "15+", label: "Years Experience", icon: Award },
-    { number: "50+", label: "Countries Served", icon: Globe },
+    { number: "10+", label: "Years Experience", icon: Award },
+    { number: "30+", label: "Counties Served", icon: Globe },
   ];
 
-  const team = [
-    {
-      name: "Sarah Hillerson",
-      role: "Lead Architect & Founder",
-      image:
-        "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=faces",
-      bio: "Visionary architect with 20+ years transforming dreams into architectural masterpieces.",
-    },
-    {
-      name: "Michael Chen",
-      role: "Senior Design Director",
-      image:
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=faces",
-      bio: "Award-winning designer specializing in sustainable and innovative residential solutions.",
-    },
-    {
-      name: "Elena Rodriguez",
-      role: "Interior Design Lead",
-      image:
-        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=faces",
-      bio: "Creative genius who brings spaces to life with perfect harmony of form and function.",
-    },
-  ];
 
   const testimonials = [
     {
       text: "HillersonsDesigns transformed our vision into reality. Their attention to detail and innovative approach exceeded all expectations.",
-      author: "James Wellington",
+      author: "James Kiratu",
       role: "Homeowner, Nakuru",
     },
     {
       text: "The team's professionalism and creative expertise made our dream home project seamless and extraordinary.",
-      author: "Maria Santos",
+      author: "Mary Natasha",
       role: "Property Developer, Nairobi",
     },
     {
       text: "Outstanding architectural solutions that perfectly balance aesthetics with functionality. Highly recommended!",
-      author: "David Thompson",
+      author: "David Ojwang",
       role: "Real Estate Investor, Kisumu",
     },
   ];
@@ -145,7 +122,7 @@ const AboutUsPage = () => {
               </div>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
                 Designing Dreams Since
-                <span className="text-emerald-600"> 2008</span>
+                <span className="text-emerald-600"> 2015</span>
               </h2>
               <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
                 What started as a passion project in a small studio has evolved
