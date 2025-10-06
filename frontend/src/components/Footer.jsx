@@ -105,7 +105,7 @@ const Footer = () => {
                   <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full shadow-lg animate-pulse" />
                 </div>
                 <div className="ml-5">
-                  <h3 className="text-4xl font-black bg-gradient-to-r from-white via-lime-200 to-emerald-200 bg-clip-text text-transparent">
+                  <h3 className="text-3xl font-black bg-gradient-to-r from-white via-lime-200 to-emerald-200 bg-clip-text text-transparent">
                     Hillersons
                     <span className="text-lime-300">InvestmentCo.</span>
                   </h3>
