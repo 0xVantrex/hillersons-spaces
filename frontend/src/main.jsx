@@ -14,7 +14,7 @@ import { ProjectsProvider } from "./context/ProjectsContext"; // Import Projects
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
-    <GoogleOAuthProvider clientId="977444208766-m4p7qi0v5oporqpioh3cvodl3pbhauc2.apps.googleusercontent.com">
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <BrowserRouter>
         <AuthProvider>
           <SearchProvider>
