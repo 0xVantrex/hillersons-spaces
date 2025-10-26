@@ -23,7 +23,8 @@ import {
   Diamond,
   Crown,
 } from "lucide-react";
-
+import { Slide } from "react-slideshow-image";
+import "react-slideshow-image/dist/styles.css";
 import { Link } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import QuickViewModal from "../components/QuickViewModal";
@@ -34,6 +35,7 @@ import WhyChooseUs from "../components/WhyChooseUs";
 import ProcessSteps from "../components/ProcessSteps";
 import { API_BASE_URL } from "../lib/api";
 import { useProjects } from "../context/ProjectsContext";
+
 
 // Clean Constants
 const FEATURES = [
@@ -57,37 +59,6 @@ const FEATURES = [
     icon: Crown,
     title: "Free Support",
     description: "24/7 architectural consultation and project guidance",
-  },
-];
-
-const CATEGORIES = [
-  {
-    name: "Modern Villas",
-    count: 0,
-    image:
-      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=300&fit=crop",
-    gradient: "from-emerald-600 to-lime-500",
-  },
-  {
-    name: "Bungalows",
-    count: 0,
-    image:
-      "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=400&h=300&fit=crop",
-    gradient: "from-lime-600 to-emerald-500",
-  },
-  {
-    name: "Apartments",
-    count: 0,
-    image:
-      "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400&h=300&fit=crop",
-    gradient: "from-emerald-700 to-lime-600",
-  },
-  {
-    name: "Commercial",
-    count: 0,
-    image:
-      "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=300&fit=crop",
-    gradient: "from-lime-700 to-emerald-600",
   },
 ];
 
@@ -125,6 +96,16 @@ const HomePage = () => {
     customizable: false,
     readyToBuild: false,
   });
+
+
+const [heroImages, setHeroImages] = useState([
+    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&h=1080&fit=crop", // modern house exterior
+    "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=1920&h=1080&fit=crop", // interior
+    "https://images.unsplash.com/photo-1505691723518-36a5ac3be353?w=1920&h=1080&fit=crop", // glass office building
+    "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1920&h=1080&fit=crop", // luxury villa
+    "https://images.unsplash.com/photo-1600585152220-90363fe7e115?w=1920&h=1080&fit=crop",
+  ]);
+
 
   const heroRef = useRef(null);
   const observerRef = useRef(null);
@@ -183,7 +164,6 @@ const HomePage = () => {
       finalImageURLs: images,
       title: data.title || "Untitled Plan",
       rooms: parseInt(data.rooms) || 0,
-      customizable: data.customizable || false,
       newListing: data.newListing || false,
       floorCount: parseInt(data.floorCount) || 0,
       height: parseInt(data.height) || 0,
@@ -191,41 +171,40 @@ const HomePage = () => {
       includes: [
         `${data.rooms || 0} Bedrooms`,
         `${data.floorCount || 0} Floors`,
-        data.customizable ? "Customizable" : "Fixed Design",
       ],
     };
   }, []);
 
-  // Fetch plans from API
-  const fetchPlans = useCallback(
-    async (type = "featured") => {
-      try {
-        const endpoint =
-          type === "featured" ? "featured=true" : "trending=true";
-        const response = await fetch(`${API_BASE_URL}/api/plans?${endpoint}`);
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch ${type} plans: ${response.status}`);
-        }
 
-        const data = await response.json();
+const fetchPlans = useCallback(
+  async (type = "featured") => {
+    try {
+      const endpoint = `${type}=true`; 
+      const response = await fetch(`${API_BASE_URL}/api/plans?${endpoint}`);
 
-        if (!Array.isArray(data)) {
-          throw new Error(`Invalid data format received for ${type} plans`);
-        }
-
-        return data.map((item, index) => {
-          const id = item.id || `${type}-${index}`;
-          return processPlanData(item, id);
-        });
-      } catch (error) {
-        console.error(`Error fetching ${type} plans:`, error);
-        setError(`Failed to load ${type} plans`);
-        return [];
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${type} plans: ${response.status}`);
       }
-    },
-    [processPlanData]
-  );
+
+      const data = await response.json();
+
+      if (!Array.isArray(data)) {
+        throw new Error(`Invalid data format received for ${type} plans`);
+      }
+
+      return data.map((item, index) => {
+        const id = item.id || `${type}-${index}`;
+        return processPlanData(item, id);
+      });
+    } catch (error) {
+      console.error(`Error fetching ${type} plans:`, error);
+      setError(`Failed to load ${type} plans`);
+      return [];
+    }
+  },
+  [processPlanData]
+);
 
   // Load data on component mount
   useEffect(() => {
@@ -234,13 +213,13 @@ const HomePage = () => {
       setError(null);
 
       try {
-        const [featured, trending] = await Promise.all([
+        const [featured, newListing] = await Promise.all([
           fetchPlans("featured"),
-          fetchPlans("trending"),
+          fetchPlans("newListing"),
         ]);
 
         setFeaturedPlans(featured);
-        setTrendingPlans(trending);
+        setTrendingPlans(newListing);
       } catch (error) {
         console.error("Error loading data:", error);
         setError("Failed to load plans data");
@@ -282,11 +261,32 @@ const HomePage = () => {
       {/* Revolutionary Hero Section */}
       <section
         ref={heroRef}
-        className="relative min-h-screen bg-gradient-to-br from-emerald-900 via-emerald-800 to-lime-800 text-white overflow-hidden flex items-center"
+        className="relative min-h-screen text-white overflow-hidden flex items-center"
       >
-        {/* Dynamic Animated Background */}
-        <div className="absolute inset-0">
-          {/* Floating geometric shapes */}
+        {/* Slideshow Background */}
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <Slide
+              duration={5000}
+              transitionDuration={1000}
+              arrows={false}
+              pauseOnHover={false}
+              autoplay={true}
+              infinite={true}
+            >
+              {heroImages.map((img, i) => (
+                <div key={i} className="relative w-full h-screen">
+                  <img
+                    src={img}
+                    alt={`Hero House ${i + 1}`}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 via-emerald-800/40 to-lime-800/40" />
+                </div>
+              ))}
+            </Slide>
+          </div>
+          <div className="absolute inset-0 z-10">
           <div className="absolute top-20 left-20 w-72 h-72 bg-gradient-to-r from-lime-400/20 to-emerald-400/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-20 right-20 w-96 h-96 bg-gradient-to-r from-emerald-400/20 to-lime-300/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
           <div
@@ -311,7 +311,7 @@ const HomePage = () => {
           ))}
         </div>
 
-        <div className="container mx-auto px-4 pt-8 pb-24 relative z-10">
+        <div className="container mx-auto px-4 pt-8 pb-24 relative z-20">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             <div className="max-w-2xl">
               {/* free Badge */}
@@ -611,7 +611,7 @@ const HomePage = () => {
 
                   {/* Floating free badge */}
                   <div className="absolute top-3 sm:top-4 left-3 sm:left-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-bold shadow-lg opacity-0 group-hover:opacity-100 transform -translate-y-2 group-hover:translate-y-0 transition-all duration-500">
-                    PREMIUM
+                    FEATURED
                   </div>
                 </div>
               </div>
