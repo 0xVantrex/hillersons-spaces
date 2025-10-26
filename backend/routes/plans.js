@@ -2,9 +2,8 @@ const express = require("express");
 const { v4: uuidv4 } = require("uuid");
 const cloudinary = require("cloudinary").v2;
 const verifyAdmin = require("../middleware/verifyAdmin");
-const Plan = require("../models/plan");
+const Plan = require("../models/Plan");
 const upload = require("../middleware/upload");
-
 const router = express.Router();
 
 // Configure Cloudinary
@@ -82,14 +81,15 @@ router.post(
         description,
         price,
         rooms,
+        floorCount,
         planImageURLs: planImages, // only blueprints
         finalImageURLs: finalImages, // only finished project pics
         image: finalImages[0] || "", // main preview image
         subCategory: req.body.subCategory || "",
         subCategoryGroup: req.body.subCategoryGroup || "",
-        premium: premium === "true",
-        featured: featured === "true",
-        newListing: newListing === "true",
+        premium: premium === "false",
+        featured: featured === "false",
+        newListing: newListing === "false",
         createdAt: new Date().toISOString(),
       });
 
@@ -105,11 +105,18 @@ router.post(
     }
   }
 );
-
-// Get all plans
+// Get all plans (with optional filters)
 router.get("/", async (req, res) => {
+
   try {
-    const plans = await Plan.find().sort({ createdAt: -1 });
+    const filter = {};
+  
+
+    if (req.query.featured === "true") filter.featured = true;
+    if (req.query.newListing === "true") filter.newListing = true;
+    if (req.query.premium === "true") filter.premium = true;
+
+    const plans = await Plan.find(filter).sort({ createdAt: -1 });
 
     const formattedPlans = plans.map((plan) => {
       const planObj = plan.toObject();
