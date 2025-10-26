@@ -46,7 +46,7 @@ const Header = ({
 
     window.addEventListener("scroll", handleScroll);
     window.addEventListener("resize", checkMobile);
-    checkMobile(); // Initial check
+    checkMobile(); 
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
@@ -60,15 +60,14 @@ const Header = ({
 
   return (
     <>
-      {/* Premium Accent Bar with Animation */}
-      <div className="w-full h-1.5 bg-gradient-to-r from-emerald-600 via-lime-500 to-emerald-600 relative overflow-hidden">
+      <div className="w-full h-0.5 bg-gradient-to-r from-emerald-600 via-lime-500 to-emerald-600 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-lime-400 to-emerald-400 opacity-60" />
       </div>
 
       {/* Main Header */}
       <header
-        className={`fixed top-1.5 left-0 right-0 z-50 transition-all duration-500 ${
+        className={`fixed top-0.5 left-0 right-0 z-50 transition-all duration-500 ${
           isScrolled
             ? "bg-white shadow-2xl border-b border-slate-200/80"
             : "bg-white shadow-xl border-b border-slate-200/50"
@@ -89,7 +88,7 @@ const Header = ({
                 <div className="absolute -bottom-0.5 -left-0.5 lg:-bottom-1 lg:-left-1 w-1.5 h-1.5 lg:w-3 lg:h-3 bg-gradient-to-br from-lime-400 to-emerald-500 rounded-full opacity-80" />
               </div>
               <div>
-                <h1 className="text-lg lg:text-3xl font-black bg-gradient-to-r from-slate-800 via-emerald-700 to-lime-600 bg-clip-text text-transparent tracking-tight">
+                <h1 className="text-lg lg:text-2xl font-black bg-gradient-to-r from-slate-800 via-emerald-700 to-lime-600 bg-clip-text text-transparent tracking-tight">
                   Hillersons
                   <span className="text-emerald-600 font-light hidden sm:inline">
                     InvestmentCo.
@@ -105,15 +104,10 @@ const Header = ({
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center space-x-1">
+            <nav className="hidden lg:flex items-center space-x-0">
               {[
                 { href: "/home", icon: Home, label: "Home", badge: null },
-                {
-                  href: "/aboutus",
-                  icon: Users,
-                  label: "About Us",
-                  badge: null,
-                },
+              
                 {
                   href: "/custom-design",
                   icon: Building,
@@ -124,7 +118,7 @@ const Header = ({
                 <a
                   key={label}
                   href={href}
-                  className="relative flex items-center gap-2 px-3 xl:px-5 py-2 xl:py-3 text-slate-700 font-medium hover:text-lime-600 transition-all duration-300 rounded-xl hover:bg-gradient-to-r hover:from-lime-50 hover:to-emerald-50 group text-sm xl:text-base"
+                  className="relative flex items-center gap-0 px-3 xl:px-5 py-2 xl:py-3 text-slate-700 font-medium hover:text-lime-600 transition-all duration-300 rounded-xl hover:bg-gradient-to-r hover:from-lime-50 hover:to-emerald-50 group text-sm xl:text-base"
                 >
                   <Icon className="w-4 h-4 group-hover:scale-110 transition-transform" />
                   {label}
@@ -368,7 +362,7 @@ const Header = ({
                 <input
                   type="text"
                   placeholder="Search designs..."
-                  className="w-48 xl:w-60 pl-10 xl:pl-12 pr-4 py-2 xl:py-3 border-2 border-slate-300 rounded-xl xl:rounded-2xl focus:ring-4 focus:ring-lime-200 focus:border-lime-500 bg-white/90 text-sm shadow-lg transition-all duration-300 group-hover:shadow-xl"
+                  className="w-36 xl:w-60 pl-10 xl:pl-12 pr-4 py-2 xl:py-3 border-2 border-slate-300 rounded-xl xl:rounded-2xl focus:ring-4 focus:ring-lime-200 focus:border-lime-500 bg-white/90 text-sm shadow-lg transition-all duration-300 group-hover:shadow-xl"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -465,7 +459,7 @@ const Header = ({
                     icon: Building,
                     label: "Custom Design",
                   },
-                  { href: "/aboutus", icon: Users, label: "About Us" },
+                 
                 ].map(({ href, icon: Icon, label }) => (
                   <a
                     key={label}
