@@ -10,7 +10,8 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:5173", 
-  "http://192.168.8.113:5173"
+  "http://192.168.8.113:5173",
+  "http://192.168.0.116:5173"
 ];
 
 
