@@ -1,0 +1,3 @@
+fix productcard
+watch showcase to be linked to an actual video 
+the categories section to pick all subcategories
