@@ -83,7 +83,10 @@ const HomePage = () => {
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/categories`)
       .then((res) => res.json())
-      .then((data) => setCategories(data))
+      .then((data) => {
+        console.log("Fetched categories:", data);
+        setCategories(data);
+      })
       .catch((err) => console.error("Failed to fetch categories:", err));
   }, []);
 
@@ -245,8 +248,8 @@ const HomePage = () => {
     setShowQuickView(true);
   }, []);
 
-  const handleCategoryChange = useCallback((index) => {
-    setActiveCategory(index);
+  const handleCategoryChange = useCallback((categoryId) => {
+    setActiveCategory(categoryId);
   }, []);
 
   // Close modals
@@ -485,21 +488,21 @@ const HomePage = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-            {categories.map((category, index) => (
+            {categories.map((category) => (
               <div
-                key={index}
+                key={category._id}
                 className="group relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl sm:shadow-2xl hover:shadow-lime-500/25 transition-all duration-700 transform hover:scale-105 cursor-pointer"
                 onClick={() => handleCategoryChange(category._id)}
               >
                 <div className="relative h-48 sm:h-56 md:h-64">
                   <img
-                    src={
-                      category.image?.[0] ||
-                      "https://via.placeholder.com/400x300"
-                    }
-                    alt={category._id}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
+        src={
+          category.subcategories?.[0]?.image?.[0] ||
+          "https://via.placeholder.com/400x300?text=No+Image"
+        }
+        alt={category._id}
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+      />
                   <div className="absolute inset-0 bg-gradient-to-t from-emerald-600 to-lime-500 opacity-70 group-hover:opacity-80 transition-opacity duration-500"></div>
 
                   <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6">
@@ -507,13 +510,13 @@ const HomePage = () => {
                       {category._id}
                     </h3>
                     <p className="text-emerald-100 font-medium opacity-90 text-sm sm:text-base transform translate-y-3 sm:translate-y-4 group-hover:translate-y-0 transition-all duration-500 delay-100">
-                      {category.count} Designs Available
-                    </p>
+  {category.subcategories?.length || 0} Designs Available
+</p>
                   </div>
 
                   <div className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-white/90 backdrop-blur rounded-full px-2 sm:px-3 py-1 shadow-lg">
                     <span className="text-xs sm:text-sm font-bold text-emerald-900">
-                      {category.count}+
+                      {category.subcategories?.length || 0}+
                     </span>
                   </div>
                 </div>
@@ -527,7 +530,7 @@ const HomePage = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12 sm:mb-16">
             <span className="inline-block bg-gradient-to-r from-emerald-600 to-lime-600 bg-clip-text text-transparent font-semibold text-base sm:text-lg mb-3 sm:mb-4">
-              free FEATURES
+              FREE FEATURES
             </span>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-emerald-900 mb-4 sm:mb-6">
               Why Choose{" "}
