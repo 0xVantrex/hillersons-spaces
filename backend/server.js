@@ -11,14 +11,14 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173", 
   "http://192.168.8.113:5173",
-  "http://192.168.0.116:5173"
+  "http://192.168.3.102:5173"
 ];
 
 
 app.use(
   cors({
     origin: allowedOrigins,
-    methods: ["GET", "POST", "OPTIONS"],
+    methods: ["GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"],
     credentials: true,
   })
 );

@@ -20,10 +20,8 @@ import { toast } from "react-hot-toast";
 import { API_BASE_URL } from "../lib/api";
 
 const ProductCard = ({
-  plan,
   product,
   isFavorite,
-  onToggleFavorite,
   viewMode,
   onQuickView,
 }) => {

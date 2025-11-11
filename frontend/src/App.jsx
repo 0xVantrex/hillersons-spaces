@@ -2,7 +2,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { useEffect } from "react";
-import { pingBackend } from "./api/backend";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -23,14 +22,7 @@ import Contact from "./pages/Contact";
 
 function App() {
   const { user, loading } = useAuth();
-  useEffect(() => {
-    pingBackend()
-      .then((data) => console.log("Backend ping successful:", data))
-      .catch((error) => console.error("Error pinging backend:", error));
-  }, []);
-
-  if (loading) return <div className="text-center p-10">Loading...</div>;
-
+ 
   const RequireAuth = ({ children }) => {
     return user ? children : <Navigate to="/login" />;
   };

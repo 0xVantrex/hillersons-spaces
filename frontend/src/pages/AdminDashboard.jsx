@@ -13,8 +13,7 @@ import {
   LineChart,
   Line,
 } from "recharts";
-
-const API_BASE_URL = "https://your-api-url.com/";
+import { API_BASE_URL } from "../lib/api";
 
 const AdminDashboard = ({ token, user }) => {
   const [loading, setLoading] = useState(true);

@@ -8,9 +8,21 @@ router.get("/", async (req, res) => {
     const categories = await Plan.aggregate([
       {
         $group: {
-          _id: "$subCategoryGroup",
+          _id: { main: "$subCategoryGroup", sub: "$subCategory" },
           count: { $sum: 1 },
           image: { $first: "$planImageURLs" },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id.main",
+          subcategories: {
+            $push: {
+              name: "$_id.sub",
+              count: "$count",
+              image: "$image",
+            },
+          },
         },
       },
       { $sort: { _id: 1 } },

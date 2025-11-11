@@ -571,27 +571,27 @@ const Header = ({
                         label: "Architectural Plans",
                       },
                       {
-                        href: "/categories/commercial-projects",
+                        href: "/categories/commercial projects",
                         icon: Globe,
                         label: "Commercial Projects",
                       },
                       {
-                        href: "/categories/residential-projects",
+                        href: "/categories/residential projects",
                         icon: Users,
                         label: "Residential Projects",
                       },
                       {
-                        href: "/categories/social-amenities-projects",
+                        href: "/categories/social amenities projects",
                         icon: Star,
                         label: "Social Amenities",
                       },
                       {
-                        href: "/categories/renovation-work",
+                        href: "/categories/renovation work",
                         icon: Hammer,
                         label: "Renovation Work",
                       },
                       {
-                        href: "/categories/interior-design",
+                        href: "/categories/interior design",
                         icon: Palette,
                         label: "Interior Design",
                       },

@@ -13,7 +13,6 @@ import {
   Award,
   Users,
 } from "lucide-react";
-import { API_BASE_URL } from "../lib/api";
 import { useProjects } from "../context/ProjectsContext";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -97,7 +96,7 @@ const Contact = () => {
     {
       icon: MapPin,
       title: "Visit Our Studio",
-      info: "Riverside Drive, Nairobi, Kenya",
+      info: "Rehema Hse, Nairobi, Kenya",
       subInfo: "By appointment only",
     },
     {
@@ -110,7 +109,7 @@ const Contact = () => {
       icon: Building,
       title: "Our Expertise",
       info: "Architecture • Interior Design • Renovation",
-      subInfo: "15+ years of experience",
+      subInfo: "10+ years of experience",
     },
   ];
 
@@ -371,25 +370,6 @@ const Contact = () => {
         </div>
       </section>
 
-      {/* Footer CTA */}
-      <section className="bg-gradient-to-r from-emerald-600 to-lime-600 py-16">
-        <div className="max-w-4xl mx-auto text-center px-6">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Ready to Transform Your Space?
-          </h2>
-          <p className="text-emerald-100 text-lg mb-8 max-w-2xl mx-auto">
-            Join over 150 satisfied clients who trusted us with their dream
-            projects. Let's make your vision a reality.
-          </p>
-          <a
-            href="mailto:hillersonsdesigns@gmail.com"
-            className="inline-flex items-center bg-white text-emerald-600 px-8 py-4 rounded-xl font-semibold hover:bg-emerald-50 transition-colors shadow-lg"
-          >
-            <Mail className="w-5 h-5 mr-2" />
-            Start Your Project
-          </a>
-        </div>
-      </section>
       <Footer />
     </div>
   );

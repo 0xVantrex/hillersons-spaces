@@ -57,9 +57,7 @@ const AllProducts = () => {
     floors: "",
     featured: false,
     newListing: false,
-    customizable: false,
     premium: false,
-    quickDelivery: false,
   });
   const [priceRange, setPriceRange] = useState([0, 10000000]);
   const [sort, setSort] = useState("featured");
@@ -235,9 +233,7 @@ const AllProducts = () => {
       floors: "",
       featured: false,
       newListing: false,
-      customizable: false,
       premium: false,
-      quickDelivery: false,
     });
     setPriceRange([0, 10000000]);
     setSort("featured");
@@ -667,11 +663,7 @@ const AllProducts = () => {
                     {[
                       { key: "featured", label: "Featured", icon: Award },
                       { key: "newListing", label: "New", icon: Sparkles },
-                      {
-                        key: "customizable",
-                        label: "Customizable",
-                        icon: SlidersHorizontal,
-                      },
+                     
                       { key: "premium", label: "Premium", icon: Crown },
                     ].map((feature) => (
                       <label

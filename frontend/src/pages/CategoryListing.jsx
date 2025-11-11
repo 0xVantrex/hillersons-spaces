@@ -1,16 +1,17 @@
 // src/pages/CategoryListing.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../lib/api";
 import { useProjects } from "../context/ProjectsContext";
 import Header from "../components/Header";
+import ProductCard from "../components/ProductCard";
+import QuickViewModal from "../components/QuickViewModal";
 import Footer from "../components/Footer";
 
 const CategoryListing = () => {
-  const { projects } = useProjects();
   const { subCategoryGroup, subCategory } = useParams();
   const navigate = useNavigate();
-  const [setProjects] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sortBy, setSortBy] = useState("newest");
@@ -20,6 +21,8 @@ const CategoryListing = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showQuickView, setShowQuickView] = useState(false);
+  const [quickViewPlan, setQuickViewPlan] = useState(null);
 
   // Decode URL parameters
   const decodedGroup = decodeURIComponent(subCategoryGroup || "");
@@ -74,6 +77,12 @@ const CategoryListing = () => {
     if (project.floors) specs.push(`${project.floors} floors`);
     return specs.join(" • ");
   };
+
+  const handleQuickView = useCallback((project) => {
+    setQuickViewPlan(project);
+    setShowQuickView(true);
+  }, []);
+
 
   // Filter projects based on search and price range
   const filteredProjects = projects.filter((project) => {
@@ -285,93 +294,13 @@ const CategoryListing = () => {
                 : "space-y-6"
             }`}
           >
-            {filteredProjects.map((project) => (
-              <div
-                key={project._id}
-                className={`bg-white rounded-2xl overflow-hidden shadow-lg border border-green-100 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 group ${
-                  viewMode === "list" ? "flex" : "block"
-                }`}
-              >
-                {/* Project Image */}
-                <div
-                  className={`relative overflow-hidden ${
-                    viewMode === "list"
-                      ? "w-80 h-48 flex-shrink-0"
-                      : "w-full h-64"
-                  }`}
-                >
-                  {project.finalImageURLs && project.finalImageURLs[0] ? (
-                    <img
-                      src={project.finalImageURLs[0]}
-                      alt={project.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-green-50 flex items-center justify-center text-5xl text-green-300">
-                      🏗️
-                    </div>
-                  )}
-
-                  {/* Price Badge */}
-                  <div className="absolute top-4 right-4 bg-lime-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                    {formatPrice(project.price)}
-                  </div>
-
-                  {/* Favorite Button */}
-                  <button className="absolute top-4 left-4 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-2 transition-all duration-300 shadow-lg">
-                    <span className="text-red-500 hover:text-red-600 text-lg">
-                      ♡
-                    </span>
-                  </button>
-                </div>
-
-                {/* Project Details */}
-                <div className="p-6 flex-1">
-                  <h2 className="text-xl font-bold text-gray-800 mb-3 line-clamp-2 group-hover:text-green-600 transition-colors">
-                    {project.title}
-                  </h2>
-
-                  {/* Specifications */}
-                  {formatSpecs(project) && (
-                    <div className="flex items-center text-gray-600 text-sm mb-3">
-                      <span className="mr-2">📐</span>
-                      <span className="font-medium">
-                        {formatSpecs(project)}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Description Preview */}
-                  {project.description && (
-                    <p
-                      className={`text-gray-600 mb-4 leading-relaxed ${
-                        viewMode === "list" ? "line-clamp-3" : "line-clamp-2"
-                      }`}
-                    >
-                      {project.description}
-                    </p>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-between">
-                    <Link
-                      to={`/project/${project._id}`}
-                      className="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl group-hover:scale-105"
-                    >
-                      View Details →
-                    </Link>
-
-                    <div className="flex gap-2">
-                      <button className="bg-green-50 hover:bg-green-100 text-green-600 p-3 rounded-full transition-all duration-300 shadow-md hover:shadow-lg">
-                        📞
-                      </button>
-                      <button className="bg-lime-50 hover:bg-lime-100 text-lime-600 p-3 rounded-full transition-all duration-300 shadow-md hover:shadow-lg">
-                        💬
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            {filteredProjects.map((product) => (
+              <ProductCard
+                key={product._id}
+                product={product}
+                viewMode={viewMode}
+                onQuickView={() => handleQuickView(product)}
+              />
             ))}
           </div>
         )}
@@ -386,6 +315,19 @@ const CategoryListing = () => {
         )}
       </div>
       <Footer />
+
+      {/* Quick View Modal */}
+      {showQuickView && quickViewPlan && (
+        <QuickViewModal
+          product={{
+            ...quickViewPlan,
+            bedrooms: quickViewPlan.rooms,
+            floorCount: quickViewPlan.floorCount,
+          }}
+          isOpen={showQuickView}
+          onClose={() => setShowQuickView(false)}
+        />
+      )}
     </div>
   );
 };

@@ -36,7 +36,6 @@ import ProcessSteps from "../components/ProcessSteps";
 import { API_BASE_URL } from "../lib/api";
 import { useProjects } from "../context/ProjectsContext";
 
-
 // Clean Constants
 const FEATURES = [
   {
@@ -64,12 +63,13 @@ const FEATURES = [
 
 const HomePage = () => {
   // State management
-  const { projects } = useProjects();
+  const { projects, setProjects } = useState([]);
   const [showQuickView, setShowQuickView] = useState(false);
   const [quickViewPlan, setQuickViewPlan] = useState(null);
   const [featuredPlans, setFeaturedPlans] = useState([]);
   const [trendingPlans, setTrendingPlans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [favorites, setFavorites] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -97,15 +97,13 @@ const HomePage = () => {
     readyToBuild: false,
   });
 
-
-const [heroImages, setHeroImages] = useState([
+  const [heroImages, setHeroImages] = useState([
     "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&h=1080&fit=crop", // modern house exterior
     "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=1920&h=1080&fit=crop", // interior
     "https://images.unsplash.com/photo-1505691723518-36a5ac3be353?w=1920&h=1080&fit=crop", // glass office building
     "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1920&h=1080&fit=crop", // luxury villa
     "https://images.unsplash.com/photo-1600585152220-90363fe7e115?w=1920&h=1080&fit=crop",
   ]);
-
 
   const heroRef = useRef(null);
   const observerRef = useRef(null);
@@ -159,7 +157,7 @@ const [heroImages, setHeroImages] = useState([
     }
 
     return {
-      id: id,
+      _id: id,
       image: images[0],
       finalImageURLs: images,
       title: data.title || "Untitled Plan",
@@ -175,36 +173,46 @@ const [heroImages, setHeroImages] = useState([
     };
   }, []);
 
-
-
-const fetchPlans = useCallback(
-  async (type = "featured") => {
-    try {
-      const endpoint = `${type}=true`; 
-      const response = await fetch(`${API_BASE_URL}/api/plans?${endpoint}`);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch ${type} plans: ${response.status}`);
+  const toggleFavorite = (productId) => {
+    setFavorites((prev) => {
+      const newFavorites = new Set(prev);
+      if (newFavorites.has(productId)) {
+        newFavorites.delete(productId);
+      } else {
+        newFavorites.add(productId);
       }
+      return newFavorites;
+    });
+  };
 
-      const data = await response.json();
+  const fetchPlans = useCallback(
+    async (type = "featured") => {
+      try {
+        const endpoint = `${type}=true`;
+        const response = await fetch(`${API_BASE_URL}/api/plans?${endpoint}`);
 
-      if (!Array.isArray(data)) {
-        throw new Error(`Invalid data format received for ${type} plans`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch ${type} plans: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!Array.isArray(data)) {
+          throw new Error(`Invalid data format received for ${type} plans`);
+        }
+
+        return data.map((item, index) => {
+          const id = item._id || `${type}-${index}`;
+          return processPlanData(item, id);
+        });
+      } catch (error) {
+        console.error(`Error fetching ${type} plans:`, error);
+        setError(`Failed to load ${type} plans`);
+        return [];
       }
-
-      return data.map((item, index) => {
-        const id = item.id || `${type}-${index}`;
-        return processPlanData(item, id);
-      });
-    } catch (error) {
-      console.error(`Error fetching ${type} plans:`, error);
-      setError(`Failed to load ${type} plans`);
-      return [];
-    }
-  },
-  [processPlanData]
-);
+    },
+    [processPlanData]
+  );
 
   // Load data on component mount
   useEffect(() => {
@@ -264,29 +272,29 @@ const fetchPlans = useCallback(
         className="relative min-h-screen text-white overflow-hidden flex items-center"
       >
         {/* Slideshow Background */}
-          <div className="absolute inset-0 z-0 overflow-hidden">
-            <Slide
-              duration={5000}
-              transitionDuration={1000}
-              arrows={false}
-              pauseOnHover={false}
-              autoplay={true}
-              infinite={true}
-            >
-              {heroImages.map((img, i) => (
-                <div key={i} className="relative w-full h-screen">
-                  <img
-                    src={img}
-                    alt={`Hero House ${i + 1}`}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 via-emerald-800/40 to-lime-800/40" />
-                </div>
-              ))}
-            </Slide>
-          </div>
-          <div className="absolute inset-0 z-10">
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <Slide
+            duration={5000}
+            transitionDuration={1000}
+            arrows={false}
+            pauseOnHover={false}
+            autoplay={true}
+            infinite={true}
+          >
+            {heroImages.map((img, i) => (
+              <div key={i} className="relative w-full h-screen">
+                <img
+                  src={img}
+                  alt={`Hero House ${i + 1}`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 via-emerald-800/40 to-lime-800/40" />
+              </div>
+            ))}
+          </Slide>
+        </div>
+        <div className="absolute inset-0 z-10">
           <div className="absolute top-20 left-20 w-72 h-72 bg-gradient-to-r from-lime-400/20 to-emerald-400/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-20 right-20 w-96 h-96 bg-gradient-to-r from-emerald-400/20 to-lime-300/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
           <div
@@ -586,24 +594,20 @@ const fetchPlans = useCallback(
 
         {!loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 md:gap-10">
-            {featuredPlans.map((plan, index) => (
+            {featuredPlans.map((product, index) => (
               <div
-                key={plan.id}
                 className="group relative bg-white rounded-2xl sm:rounded-3xl shadow-lg sm:shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 overflow-hidden border border-emerald-100 hover:border-lime-300"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 {/* Enhanced Product Card Wrapper */}
                 <div className="relative">
                   <ProductCard
-                    product={{
-                      ...plan,
-                      bedrooms: plan.rooms,
-                      floorCount: plan.floorCount,
-                    }}
-                    isFavorite={false}
-                    onToggleFavorite={() => {}}
-                    viewMode="grid"
-                    onQuickView={() => handleQuickView(plan)}
+                    key={product._id}
+                    product={product}
+                    isFavorite={favorites.has(product._id)}
+                    onToggleFavorite={() => toggleFavorite(product._id)}
+                 
+                    onQuickView={() => handleQuickView(product)}
                   />
 
                   {/* free overlay effects */}
@@ -661,26 +665,18 @@ const fetchPlans = useCallback(
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 md:gap-10">
-              {trendingPlans.map((plan, index) => (
+              {trendingPlans.map((product, index) => (
                 <div
-                  key={plan.id}
                   className="group relative bg-white rounded-2xl sm:rounded-3xl shadow-lg sm:shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 overflow-hidden border border-emerald-100 hover:border-lime-300"
                   style={{ animationDelay: `${index * 150}ms` }}
                 >
                   <div className="relative">
                     <ProductCard
-                      product={{
-                        ...plan,
-                        bedrooms: plan.rooms,
-                        floorCount: plan.floorCount,
-                        architect: plan.architect,
-                        saved: 0,
-                        views: 0,
-                      }}
-                      isFavorite={false}
-                      onToggleFavorite={() => {}}
-                      viewMode="grid"
-                      onQuickView={() => handleQuickView(plan)}
+                      key={product._id}
+                      product={product}
+                      isFavorite={favorites.has(product._id)}
+                      onToggleFavorite={() => toggleFavorite(product._id)}
+                      onQuickView={() => handleQuickView(product)}
                     />
 
                     {/* Trending indicator */}
