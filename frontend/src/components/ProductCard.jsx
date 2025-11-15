@@ -19,12 +19,7 @@ import { useCart } from "../context/CartContext";
 import { toast } from "react-hot-toast";
 import { API_BASE_URL } from "../lib/api";
 
-const ProductCard = ({
-  product,
-  isFavorite,
-  viewMode,
-  onQuickView,
-}) => {
+const ProductCard = ({ product, isFavorite, viewMode, onQuickView }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const navigate = useNavigate();
@@ -126,10 +121,7 @@ const ProductCard = ({
                   <h3 className="text-2xl font-bold text-gray-800 mb-2 group-hover:text-emerald-700 transition-colors duration-300">
                     {product.title || "Premium House Plan"}
                   </h3>
-                  <p className="text-gray-600 font-medium flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-emerald-500" />
-                    by {product.architect}
-                  </p>
+                  
                 </div>
                 <div className="flex items-center gap-3">
                   <button
@@ -201,10 +193,7 @@ const ProductCard = ({
                     ? `KES ${product.price.toLocaleString()}`
                     : "Contact for Price"}
                 </span>
-                <p className="text-gray-600 font-medium mt-1 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-emerald-500" />
-                  Delivery: {product.completionTime}
-                </p>
+               
               </div>
 
               <div className="flex gap-3">
@@ -331,10 +320,6 @@ const ProductCard = ({
           <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-emerald-700 transition-colors duration-300 line-clamp-2">
             {product.title || "Premium House Plan"}
           </h3>
-          <p className="text-sm text-gray-600 flex items-center">
-            <Shield className="w-4 h-4 text-emerald-500 mr-1.5" />
-            by {product.architect}
-          </p>
         </div>
 
         {/* Enhanced Property Features */}
@@ -376,10 +361,6 @@ const ProductCard = ({
                 ? `KES ${product.price.toLocaleString()}`
                 : "Contact"}
             </span>
-            <p className="text-sm text-gray-600 font-medium mt-1 flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-emerald-500" />
-              {product.completionTime}
-            </p>
           </div>
 
           <button
@@ -390,31 +371,6 @@ const ProductCard = ({
             Add
           </button>
         </div>
-
-        {/* Enhanced What's Included */}
-        {product.includes && product.includes.length > 0 && (
-          <div className="pt-5 border-t border-gray-100">
-            <p className="text-sm text-gray-600 mb-2 font-medium flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-emerald-500" />
-              What's Included:
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {product.includes.slice(0, 3).map((item, index) => (
-                <span
-                  key={index}
-                  className="text-xs bg-gradient-to-r from-lime-50 to-emerald-50 text-emerald-700 px-2.5 py-1.5 rounded-xl font-medium border border-lime-200/50"
-                >
-                  {item}
-                </span>
-              ))}
-              {product.includes.length > 3 && (
-                <span className="text-xs bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 px-2.5 py-1.5 rounded-xl font-bold border border-emerald-200/50">
-                  +{product.includes.length - 3} more
-                </span>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

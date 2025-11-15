@@ -12,6 +12,7 @@ const UploadProject = () => {
         floorCount: "",
         rooms: "",
         price: "",
+        area: "",
         planImageURLs: [],
         finalImageURLs: [],
         featured: false,        
@@ -84,6 +85,8 @@ const handleSubmit = async (e) => {
     uploadData.append('title', formData.title);
     uploadData.append('description', formData.description);
     uploadData.append('price', Number(formData.price));
+    uploadData.append('area', formData.area);
+    uploadData.append('floorCount', formData.floorCount);
     uploadData.append('rooms', formData.rooms);
     uploadData.append('subCategoryGroup', formData.subCategoryGroup);
     uploadData.append('subCategory', formData.subCategory);
@@ -123,6 +126,7 @@ const handleSubmit = async (e) => {
       subCategory: "Mixed use development",
       floorCount: "",
       length: "",
+      area: "",
       width: "",
       height: "",
       rooms: "",
@@ -265,36 +269,12 @@ const handleSubmit = async (e) => {
             {/* Dimensions */}
             <div className="grid md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Length (m)</label>
+                <label className="text-sm font-semibold text-gray-700">Area (sqm)</label>
                 <input
-                  name="length"
+                  name="area"
                   type="number"
                   placeholder="e.g., 15"
-                  value={formData.length}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 outline-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Width (m)</label>
-                <input
-                  name="width"
-                  type="number"
-                  placeholder="e.g., 12"
-                  value={formData.width}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 outline-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Height (m)</label>
-                <input
-                  name="height"
-                  type="number"
-                  placeholder="e.g., 3"
-                  value={formData.height}
+                  value={formData.area}
                   onChange={handleChange}
                   className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 outline-none"
                 />
