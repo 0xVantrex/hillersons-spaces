@@ -27,6 +27,7 @@ router.post(
         title,
         description,
         price,
+        area,
         rooms,
         premium,
         featured,
@@ -80,6 +81,7 @@ router.post(
         title,
         description,
         price,
+        area,
         rooms,
         floorCount,
         planImageURLs: planImages, // only blueprints
