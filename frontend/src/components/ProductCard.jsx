@@ -11,8 +11,6 @@ import {
   ArrowRight,
   Eye,
   Sparkles,
-  Clock,
-  Shield,
   Zap,
 } from "lucide-react";
 import { useCart } from "../context/CartContext";
@@ -25,6 +23,7 @@ const ProductCard = ({ product, isFavorite, viewMode, onQuickView }) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
 
+  
   const handleCardClick = (e) => {
     // Check if the click was on an interactive element
     const isInteractiveElement = e.target.closest('button, a, [role="button"]');
@@ -121,7 +120,6 @@ const ProductCard = ({ product, isFavorite, viewMode, onQuickView }) => {
                   <h3 className="text-2xl font-bold text-gray-800 mb-2 group-hover:text-emerald-700 transition-colors duration-300">
                     {product.title || "Premium House Plan"}
                   </h3>
-                  
                 </div>
                 <div className="flex items-center gap-3">
                   <button
@@ -193,7 +191,6 @@ const ProductCard = ({ product, isFavorite, viewMode, onQuickView }) => {
                     ? `KES ${product.price.toLocaleString()}`
                     : "Contact for Price"}
                 </span>
-               
               </div>
 
               <div className="flex gap-3">
