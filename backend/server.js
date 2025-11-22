@@ -42,7 +42,7 @@ app.use("/api/inquiries", inquiryRoutes);
 const favoriteRoutes = require("./routes/favoriteRoutes");
 app.use("/api/favorites", favoriteRoutes);
 
-const CustomRequests = require("./routes/CustomRequests");
+const CustomRequests = require("./routes/customRequests");
 app.use("/api/custom-requests", CustomRequests);
 
 const categoryRoutes = require("./routes/category");
