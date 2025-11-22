@@ -8,7 +8,7 @@ const router = express.Router();
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-const verifyToken = require("../middleware/Auth");
+const verifyToken = require("../middleware/auth");
 
 //  Google Signup / login
 router.post("/google", async (req, res) => {
