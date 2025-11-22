@@ -5,63 +5,60 @@ require("dotenv").config();
 
 const app = express();
 
+// -------------------
+// CORS Middleware
+// -------------------
 
-// Middleware
-
+// Add all your frontend URLs here
 const allowedOrigins = [
-  "https://hillersons-architecture-site-huwi3jqd9-0xvantrexs-projects.vercel.app" // remove trailing slash
+  "https://hillersons-architecture-site.vercel.app",       // Production
+  "https://hillersons-architecture-site-huwi3jqd9-0xvantrexs-projects.vercel.app" // Preview/Dev
 ];
 
 app.use(
   cors({
     origin: function(origin, callback) {
-      if (!origin) return callback(null, true); // allow non-browser requests like Postman
-      if (allowedOrigins.indexOf(origin) !== -1) {
+      // allow requests with no origin (Postman, server-to-server)
+      if (!origin) return callback(null, true);
+
+      // normalize origin: remove trailing slash if any
+      const normalizedOrigin = origin.replace(/\/$/, "");
+
+      if (allowedOrigins.includes(normalizedOrigin)) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        callback(new Error(`Not allowed by CORS: ${origin}`));
       }
     },
     methods: ["GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"],
     credentials: true,
   })
 );
+
+// JSON body parsing
 app.use(express.json());
 
+// -------------------
 // Routes
+// -------------------
 
-const authRoutes = require("./routes/auth");
-app.use("/api/auth", authRoutes);
-
-const planRoutes = require("./routes/plans");
-app.use("/api/plans", planRoutes);
-
-const cartRoutes = require("./routes/cart");
-app.use("/api/cart", cartRoutes);
-
-const inquiryRoutes = require("./routes/Inquiry");
-app.use("/api/inquiries", inquiryRoutes);
-
-const favoriteRoutes = require("./routes/favoriteRoutes");
-app.use("/api/favorites", favoriteRoutes);
-
-const CustomRequests = require("./routes/customRequests");
-app.use("/api/custom-requests", CustomRequests);
-
-const categoryRoutes = require("./routes/category");
-app.use("/api/categories", categoryRoutes);
-
-const projects = require("./routes/projects");
-app.use("/api/projects", projects);
-
+app.use("/api/auth", require("./routes/auth"));
+app.use("/api/plans", require("./routes/plans"));
+app.use("/api/cart", require("./routes/cart"));
+app.use("/api/inquiries", require("./routes/Inquiry"));
+app.use("/api/favorites", require("./routes/favoriteRoutes"));
+app.use("/api/custom-requests", require("./routes/customRequests"));
+app.use("/api/categories", require("./routes/category"));
+app.use("/api/projects", require("./routes/projects"));
 
 // Test route
-
 app.get("/", (req, res) => {
   res.send("🔥 Backend API is up and running");
 });
 
-// Mongo + Server boot
+// -------------------
+// MongoDB + Server
+// -------------------
 
 const PORT = process.env.PORT || 5000;
 
@@ -69,7 +66,6 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("✅ Connected to MongoDB");
-    // Listen on all network interfaces
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`✅ Backend running on http://0.0.0.0:${PORT}`);
       console.log(`🌐 Access via LAN: http://192.168.8.113:${PORT}`);
@@ -79,4 +75,3 @@ mongoose
     console.error("❌ MongoDB connection error:", err);
     process.exit(1);
   });
-
