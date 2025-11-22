@@ -9,9 +9,8 @@ const app = express();
 // Middleware
 
 const allowedOrigins = [
-  "http://localhost:5173", 
-  "http://192.168.8.113:5173",
-  "http://192.168.3.102:5173"
+  "https://hillersons-architecture-site-huwi3jqd9-0xvantrexs-projects.vercel.app/", 
+
 ];
 
 
