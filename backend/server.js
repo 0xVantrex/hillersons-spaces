@@ -9,19 +9,23 @@ const app = express();
 // Middleware
 
 const allowedOrigins = [
-  "https://hillersons-architecture-site-huwi3jqd9-0xvantrexs-projects.vercel.app/", 
-
+  "https://hillersons-architecture-site-huwi3jqd9-0xvantrexs-projects.vercel.app" // remove trailing slash
 ];
-
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: function(origin, callback) {
+      if (!origin) return callback(null, true); // allow non-browser requests like Postman
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"],
     credentials: true,
   })
 );
-
 app.use(express.json());
 
 // Routes
