@@ -107,7 +107,7 @@ const Footer = () => {
                 <div className="ml-5">
                   <h3 className="text-3xl font-black bg-gradient-to-r from-white via-lime-200 to-emerald-200 bg-clip-text text-transparent">
                     Hillersons
-                    <span className="text-lime-300">InvestmentCo.</span>
+                    <span className="text-lime-300">Spaces</span>
                   </h3>
                   <p className="text-lime-300 font-semibold text-sm tracking-wide">
                     Your Vision, Our Efficient Solution
@@ -355,7 +355,7 @@ const Footer = () => {
             </div>
           </div>
           <p className="text-slate-400 text-sm">
-            &copy; {new Date().getFullYear()} Hillersons InvestmentsCo. All
+            &copy; {new Date().getFullYear()} Hillersons Spaces All
             rights reserved.
             <span className="text-lime-400 ml-2 font-semibold">
               Crafted with <Heart className="w-4 h-4 inline text-red-400" /> in

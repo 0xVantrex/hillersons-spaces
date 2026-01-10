@@ -91,7 +91,7 @@ const Header = ({
                 <h1 className="text-lg lg:text-2xl font-black bg-gradient-to-r from-slate-800 via-emerald-700 to-lime-600 bg-clip-text text-transparent tracking-tight">
                   Hillersons
                   <span className="text-emerald-600 font-light hidden sm:inline">
-                    InvestmentCo.
+                    Spaces
                   </span>
                 </h1>
                 <p className="text-xs text-slate-500 font-medium tracking-wide hidden lg:block">
@@ -158,7 +158,7 @@ const Header = ({
                     <div className="space-y-2 px-6">
                       {/*Whatsapp*/}
                       <a
-                        href="https://wa.me/254763831806?text=Hello%20Hillersons%20InvestmentCo.,%20I%20would%20like%20to%20inquire%20about%20your%20services."
+                        href="https://wa.me/254763831806?text=Hello%20Hillersons%20Spaces,%20I%20would%20like%20to%20inquire%20about%20your%20services."
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-3 px-4 py-3 hover:bg-gradient-to-r hover:from-lime-50 hover:to-emerald-50 rounded-xl transition-all duration-300"
@@ -480,7 +480,7 @@ const Header = ({
                   <div className="space-y-2">
                     {/*Whatsapp*/}
                     <a
-                      href="https://wa.me/254763831806?text=Hello%20Hillersons%20InvestmentCo.,%20I%20would%20like%20to%20inquire%20about%20your%20services."
+                      href="https://wa.me/254763831806?text=Hello%20Hillersons%20Spaces,%20I%20would%20like%20to%20inquire%20about%20your%20services."
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 px-4 py-3 hover:bg-gradient-to-r hover:from-lime-50 hover:to-emerald-50 rounded-xl transition-all duration-300"
