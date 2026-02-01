@@ -84,9 +84,7 @@ const Header = ({
                 <div className="bg-gradient-to-br from-emerald-600 via-emerald-700 to-lime-600 text-white p-2 lg:p-4 rounded-xl lg:rounded-2xl shadow-2xl group-hover:shadow-emerald-300/40 transition-all duration-500 group-hover:scale-105">
                   <Building className="w-5 h-5 lg:w-8 lg:h-8" />
                 </div>
-                <div className="absolute -top-0.5 -right-0.5 lg:-top-1 lg:-right-1 w-2 h-2 lg:w-4 lg:h-4 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full shadow-lg animate-pulse" />
-                <div className="absolute -bottom-0.5 -left-0.5 lg:-bottom-1 lg:-left-1 w-1.5 h-1.5 lg:w-3 lg:h-3 bg-gradient-to-br from-lime-400 to-emerald-500 rounded-full opacity-80" />
-              </div>
+                </div>
               <div>
                 <h1 className="text-lg lg:text-2xl font-black bg-gradient-to-r from-slate-800 via-emerald-700 to-lime-600 bg-clip-text text-transparent tracking-tight">
                   Hillersons

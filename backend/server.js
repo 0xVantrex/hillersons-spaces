@@ -11,17 +11,16 @@ const app = express();
 
 // Add all your frontend URLs here
 const allowedOrigins = [
+  "http://localhost:5173",  //Testing
   "https://hillersons-architecture-site.vercel.app",       // Production
-  "https://hillersons-architecture-site-huwi3jqd9-0xvantrexs-projects.vercel.app" // Preview/Dev
 ];
 
 app.use(
   cors({
     origin: function(origin, callback) {
-      // allow requests with no origin (Postman, server-to-server)
       if (!origin) return callback(null, true);
 
-      // normalize origin: remove trailing slash if any
+      //
       const normalizedOrigin = origin.replace(/\/$/, "");
 
       if (allowedOrigins.includes(normalizedOrigin)) {

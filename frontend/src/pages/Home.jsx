@@ -534,7 +534,7 @@ const HomePage = () => {
             </span>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-emerald-900 mb-4 sm:mb-6">
               Why Choose{" "}
-              <span className="text-lime-600">HillersonsInvestmentCompany</span>
+              <span className="text-lime-600">HillersonsSpaces</span>
             </h2>
           </div>
 
