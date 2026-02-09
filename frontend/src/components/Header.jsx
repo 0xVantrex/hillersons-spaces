@@ -88,7 +88,7 @@ const Header = ({
               <div>
                 <h1 className="text-lg lg:text-2xl font-black bg-gradient-to-r from-slate-800 via-emerald-700 to-lime-600 bg-clip-text text-transparent tracking-tight">
                   Hillersons
-                  <span className="text-emerald-600 font-light hidden sm:inline">
+                  <span className="text-emerald-600 font-light sm:inline">
                     Spaces
                   </span>
                 </h1>
