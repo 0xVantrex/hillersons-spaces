@@ -79,7 +79,7 @@ const ProductCard = ({ product, isFavorite, viewMode, onQuickView }) => {
         </div>
 
         <div className="relative z-10 flex">
-          <div className="w-80 h-56 relative overflow-hidden">
+          <div className="w-full max-w-xs md:max-w-sm lg:w-80 h-56 relative overflow-hidden">
             {/* Enhanced gradient background */}
             <div className="absolute inset-0 bg-gradient-to-br from-lime-50 via-emerald-50 to-green-50"></div>
             <div className="absolute inset-0 bg-gradient-to-tr from-lime-100/40 via-transparent to-emerald-100/40"></div>
@@ -302,13 +302,7 @@ const ProductCard = ({ product, isFavorite, viewMode, onQuickView }) => {
           </div>
         )}
 
-        {/* Enhanced rating badge */}
-        <div className="absolute top-5 right-5 bg-white/95 backdrop-blur-sm rounded-2xl px-3 py-1.5 flex items-center gap-1 shadow-lg border border-white/30 z-40">
-          <Star className="w-4 h-4 text-amber-500 fill-current" />
-          <span className="text-sm font-bold text-gray-800">
-            {product.rating}
-          </span>
-        </div>
+      
       </div>
 
       {/* Enhanced Card Content */}
