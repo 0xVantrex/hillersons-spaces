@@ -104,7 +104,7 @@ const Header = ({
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center space-x-0">
               {[
-                { href: "/home", icon: Home, label: "Home", badge: null },
+                { href: "/", icon: Home, label: "Home", badge: null },
               
                 {
                   href: "/custom-design",
@@ -451,7 +451,7 @@ const Header = ({
               <div className="px-6 space-y-1">
                 {/* Top nav links */}
                 {[
-                  { href: "/home", icon: Home, label: "Home" },
+                  { href: "/", icon: Home, label: "Home" },
                   {
                     href: "/custom-design",
                     icon: Building,
