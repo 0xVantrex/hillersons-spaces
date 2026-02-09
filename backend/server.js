@@ -12,7 +12,7 @@ const app = express();
 // Add all your frontend URLs here
 const allowedOrigins = [
   "http://localhost:5173",  //Testing
-  "https://hillersons-architecture-site.vercel.app",       // Production
+  "https://hillersonsspaces.vercel.app",       // Production
 ];
 
 app.use(

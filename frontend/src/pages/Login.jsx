@@ -10,7 +10,7 @@ import {
   Shield,
   ArrowRight,
 } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import { API_BASE_URL } from "../lib/api";
 import ForgotPassword from "../components/ForgotPassword";
@@ -19,12 +19,13 @@ import axios from "axios";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || "/";
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
-  const [rememberMe, setRememberMe] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -94,7 +95,6 @@ export default function Login() {
         body: JSON.stringify({
           email: form.email,
           password: form.password,
-          rememberMe: rememberMe,
         }),
       });
 
@@ -108,15 +108,13 @@ export default function Login() {
 
       const { token, user } = data;
 
-      localStorage.setItem("token", token);
-
-      login(user, token, rememberMe);
+      login(user, token,);
       setTimeout(() => {
         if (user.role === "admin") {
           setShowSuccess(true);
-          navigate("/admin/dashboard");
+          navigate("/admin/dashboard", { replace: true});
         } else {
-          navigate("/");
+          navigate(from, { replace: true});
         }
       }, 900);
     } catch (err) {
@@ -141,10 +139,8 @@ export default function Login() {
 
       const { token, user } = res.data;
 
-      localStorage.setItem("token", token);
-
       login(user, token, true);
-      navigate("/home");
+      navigate(from, { replace: true});
     } catch (err) {
       console.error("Google signup error:", err);
       setError("Google signup failed: " + err.message);
@@ -277,17 +273,7 @@ export default function Login() {
 
             {/* Remember Me & Forgot Password */}
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
-                />
-                <span className="text-sm text-gray-600 group-hover:text-gray-800">
-                  Remember me
-                </span>
-              </label>
+              
               <button
                 type="button"
                 onClick={handleForgotPassword}
