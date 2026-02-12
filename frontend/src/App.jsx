@@ -1,7 +1,6 @@
 // src/App.js
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation  } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
-import { useEffect } from "react";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -21,11 +20,21 @@ import CustomDesignForm from "./pages/CustomDesignForm";
 import Contact from "./pages/Contact";
 
 function App() {
-  const { user, loading } = useAuth();
- 
-  const RequireAuth = ({ children }) => {
-    return user ? children : <Navigate to="/login" />;
-  };
+
+    const {user, loading } = useAuth();
+
+    const RequireAuth = ({ children }) => {
+    const location = useLocation();
+
+    if (loading) return null;
+
+    if (!user) {
+      return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return children;
+};
+
 
   return (
     <Routes>
@@ -57,6 +66,7 @@ function App() {
           </RequireAuth>
         }
       />
+    
 
       {/* Regular Pages */}
       <Route path="/productDetail" element={<ProductDetail />} />
