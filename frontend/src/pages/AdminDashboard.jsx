@@ -422,31 +422,31 @@ const AdminDashboard = ({ token, user }) => {
               <StatCard
                 title="Total Projects"
                 value={analytics.totalProjects}
-                icon="🏗️"
+  
                 trend={12}
               />
               <StatCard
                 title="Total Inquiries"
                 value={analytics.totalInquiries}
-                icon="💬"
+              
                 trend={8}
               />
               <StatCard
                 title="Custom Designs"
                 value={analytics.totalCustomRequests}
-                icon="✨"
+             
                 trend={23}
               />
               <StatCard
                 title="Total Favorites"
                 value={analytics.totalFavorites}
-                icon="❤️"
+             
                 trend={15}
               />
               <StatCard
                 title="Total Views"
                 value={analytics.totalViews}
-                icon="👁️"
+             
                 trend={25}
               />
             </div>
