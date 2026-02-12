@@ -817,7 +817,7 @@ const ProductDetail = () => {
             </Link>
             <ChevronRight className="w-4 h-4 text-green-400" />
             <Link
-              to="/products"
+              to="/Allproducts"
               className="text-green-600 hover:text-green-700 transition-colors"
             >
               House Plans
