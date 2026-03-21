@@ -23,6 +23,16 @@ const LISTING_STATUS_STYLES = {
   draft: "bg-gray-100 text-gray-500 border-gray-200",
 };
 
+const BOOKING_STATUS_STYLES = {
+  pending: "bg-amber-100 text-amber-800 border-amber-300",
+  confirmed: "bg-emerald-100 text-emerald-800 border-emerald-300",
+  cancelled: "bg-red-100 text-red-700 border-red-300",
+  completed: "bg-gray-100 text-gray-700 border-gray-300",
+  rejected: "bg-red-100 text-red-800 border-red-300",
+};
+
+const AMENITY_OPTIONS = ["wifi", "parking", "pool", "ac", "breakfast", "security"];
+
 const AdminDashboard = () => {
   const { token, user, logout } = useAuth();
   const navigate = useNavigate();
@@ -34,7 +44,7 @@ const AdminDashboard = () => {
   const [inquiries, setInquiries] = useState([]);
   const [customRequests, setCustomRequests] = useState([]);
 
-  // New vendor + listings data
+  // Vendor + listings
   const [vendors, setVendors] = useState([]);
   const [vendorFilter, setVendorFilter] = useState("pending");
   const [listings, setListings] = useState([]);
@@ -42,10 +52,24 @@ const AdminDashboard = () => {
   const [vendorsLoading, setVendorsLoading] = useState(false);
   const [listingsLoading, setListingsLoading] = useState(false);
 
-  // Reject modal state
+  // BNB
+  const [bnbListings, setBnbListings] = useState([]);
+  const [bnbBookings, setBnbBookings] = useState([]);
+  const [bnbLoading, setBnbLoading] = useState(false);
+  const [bnbBookingFilter, setBnbBookingFilter] = useState("all");
+  const [showBnbForm, setShowBnbForm] = useState(false);
+  const [bnbForm, setBnbForm] = useState({
+    title: "", description: "", location: "", county: "", town: "",
+    pricePerNight: "", maxGuests: "", bedrooms: "", bathrooms: "",
+    checkInTime: "14:00", checkOutTime: "11:00", amenities: [], rules: "",
+  });
+  const [bnbFormLoading, setBnbFormLoading] = useState(false);
+  const [bnbFormError, setBnbFormError] = useState("");
+
+  // Reject modal
   const [rejectNote, setRejectNote] = useState("");
   const [rejectingId, setRejectingId] = useState(null);
-  const [rejectTarget, setRejectTarget] = useState(null); // "vendor" | "listing"
+  const [rejectTarget, setRejectTarget] = useState(null);
 
   const [analytics, setAnalytics] = useState({
     totalPlans: 0, totalInquiries: 0, totalCustomRequests: 0, totalLikes: 0,
@@ -96,11 +120,11 @@ const AdminDashboard = () => {
     [...inquiries].sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt)).slice(0,2)
       .forEach((i) => a.push({ message: `New inquiry from ${i.name}`, time: formatTimeAgo(i.createdAt) }));
     [...requests].sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt)).slice(0,2)
-      .forEach((r) => a.push({ message: `Custom request from ${r.name} — ${r.projectType || "unspecified"}`, time: formatTimeAgo(r.createdAt) }));
+      .forEach((r) => a.push({ message: `Custom request from ${r.name}`, time: formatTimeAgo(r.createdAt) }));
     return a.slice(0, 6);
   };
 
-  // ── Fetch existing data ────────────────────────────────────────────────────
+  // ── Fetches ────────────────────────────────────────────────────────────────
   const fetchAll = useCallback(async () => {
     const activeToken = token || localStorage.getItem("authToken");
     if (!activeToken) return;
@@ -112,7 +136,7 @@ const AdminDashboard = () => {
         if (!res.ok) { console.warn(`${url} returned ${res.status}`); return []; }
         const data = await res.json();
         return Array.isArray(data) ? data : [];
-      } catch (e) { console.warn(`Failed: ${url}`, e.message); return []; }
+      } catch (e) { return []; }
     };
     const [safePlans, safeInquiries, safeRequests] = await Promise.all([
       safeFetch(`${API_BASE_URL}/api/plans`),
@@ -134,7 +158,6 @@ const AdminDashboard = () => {
     setLoading(false);
   }, [token]);
 
-  // ── Fetch vendors ──────────────────────────────────────────────────────────
   const fetchVendors = useCallback(async (status) => {
     setVendorsLoading(true);
     try {
@@ -145,13 +168,10 @@ const AdminDashboard = () => {
     finally { setVendorsLoading(false); }
   }, [token]);
 
-  // ── Fetch listings ─────────────────────────────────────────────────────────
   const fetchListings = useCallback(async (status) => {
     setListingsLoading(true);
     try {
-      const url = status === "all"
-        ? `${API_BASE_URL}/api/listings/admin/all`
-        : `${API_BASE_URL}/api/listings/admin/all?status=${status}`;
+      const url = status === "all" ? `${API_BASE_URL}/api/listings/admin/all` : `${API_BASE_URL}/api/listings/admin/all?status=${status}`;
       const res = await fetch(url, { headers: getHeaders() });
       const data = await res.json();
       setListings(Array.isArray(data?.listings) ? data.listings : []);
@@ -159,9 +179,25 @@ const AdminDashboard = () => {
     finally { setListingsLoading(false); }
   }, [token]);
 
+  const fetchBnb = useCallback(async () => {
+    setBnbLoading(true);
+    try {
+      const [listRes, bookRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/bnb/admin/all-bookings`, { headers: getHeaders() }),
+        fetch(`${API_BASE_URL}/api/bnb?limit=50`, { headers: getHeaders() }),
+      ]);
+      const bookData = await listRes.json();
+      const listData = await bookRes.json();
+      setBnbBookings(Array.isArray(bookData?.bookings) ? bookData.bookings : []);
+      setBnbListings(Array.isArray(listData?.listings) ? listData.listings : []);
+    } catch (err) { console.error(err); }
+    finally { setBnbLoading(false); }
+  }, [token]);
+
   useEffect(() => { fetchAll(); }, [fetchAll]);
   useEffect(() => { if (activeTab === "vendors") fetchVendors(vendorFilter); }, [activeTab, vendorFilter]);
   useEffect(() => { if (activeTab === "listings") fetchListings(listingFilter); }, [activeTab, listingFilter]);
+  useEffect(() => { if (activeTab === "bnb") fetchBnb(); }, [activeTab]);
 
   // ── Existing actions ───────────────────────────────────────────────────────
   const deletePlan = async (id) => {
@@ -205,6 +241,67 @@ const AdminDashboard = () => {
     fetchListings(listingFilter);
   };
 
+  // ── BNB actions ────────────────────────────────────────────────────────────
+  const handleBnbBookingAction = async (bookingId, action) => {
+    await fetch(`${API_BASE_URL}/api/bnb/host/${bookingId}/${action}`, {
+      method: "PATCH", headers: getHeaders(),
+    });
+    fetchBnb();
+  };
+
+  const handleCreateBnb = async (e) => {
+    e.preventDefault();
+    if (!bnbForm.title.trim()) return setBnbFormError("Title is required.");
+    if (!bnbForm.description.trim()) return setBnbFormError("Description is required.");
+    if (!bnbForm.pricePerNight) return setBnbFormError("Price per night is required.");
+
+    setBnbFormLoading(true);
+    setBnbFormError("");
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/bnb/admin/create`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({
+          title: bnbForm.title,
+          description: bnbForm.description,
+          location: bnbForm.location,
+          county: bnbForm.county,
+          town: bnbForm.town,
+          price: Number(bnbForm.pricePerNight),
+          listingType: "bnb",
+          bnb: {
+            pricePerNight: Number(bnbForm.pricePerNight),
+            maxGuests: Number(bnbForm.maxGuests) || 1,
+            bedrooms: Number(bnbForm.bedrooms) || 1,
+            bathrooms: Number(bnbForm.bathrooms) || 1,
+            checkInTime: bnbForm.checkInTime,
+            checkOutTime: bnbForm.checkOutTime,
+            amenities: bnbForm.amenities,
+            rules: bnbForm.rules ? bnbForm.rules.split("\n").filter(Boolean) : [],
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create BNB");
+      setShowBnbForm(false);
+      setBnbForm({
+        title: "", description: "", location: "", county: "", town: "",
+        pricePerNight: "", maxGuests: "", bedrooms: "", bathrooms: "",
+        checkInTime: "14:00", checkOutTime: "11:00", amenities: [], rules: "",
+      });
+      fetchBnb();
+    } catch (err) {
+      setBnbFormError(err.message);
+    } finally {
+      setBnbFormLoading(false);
+    }
+  };
+
+  const toggleBnbAmenity = (a) => setBnbForm((f) => ({
+    ...f,
+    amenities: f.amenities.includes(a) ? f.amenities.filter((x) => x !== a) : [...f.amenities, a],
+  }));
+
   // ── Reject modal ───────────────────────────────────────────────────────────
   const openRejectModal = (id, target) => { setRejectingId(id); setRejectTarget(target); setRejectNote(""); };
   const confirmReject = async () => {
@@ -237,33 +334,30 @@ const AdminDashboard = () => {
     { id: "custom-designs", label: "Custom Designs" },
     { id: "vendors", label: "Vendors" },
     { id: "listings", label: "Listings" },
+    { id: "bnb", label: "BNB" },
     { id: "analytics", label: "Analytics" },
   ];
+
+  const filteredBnbBookings = bnbBookingFilter === "all"
+    ? bnbBookings
+    : bnbBookings.filter((b) => b.status === bnbBookingFilter);
 
   return (
     <div className="min-h-screen bg-gray-50">
 
-      {/* ── Reject Modal ── */}
+      {/* Reject Modal */}
       {rejectingId && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
             <h3 className="text-lg font-bold text-gray-800 mb-3">Reason for Rejection</h3>
-            <textarea
-              value={rejectNote}
-              onChange={(e) => setRejectNote(e.target.value)}
+            <textarea value={rejectNote} onChange={(e) => setRejectNote(e.target.value)}
               placeholder="Provide a reason (optional but recommended)..."
-              rows={4}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-400 resize-none text-sm"
-            />
+              rows={4} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-400 resize-none text-sm" />
             <div className="flex gap-3 mt-4">
               <button onClick={() => { setRejectingId(null); setRejectTarget(null); }}
-                className="flex-1 py-2.5 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition text-sm">
-                Cancel
-              </button>
+                className="flex-1 py-2.5 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition text-sm">Cancel</button>
               <button onClick={confirmReject}
-                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition text-sm">
-                Confirm Reject
-              </button>
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition text-sm">Confirm Reject</button>
             </div>
           </div>
         </div>
@@ -279,9 +373,7 @@ const AdminDashboard = () => {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-500">{user?.email}</span>
-              <button onClick={handleLogout} className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm">
-                Sign Out
-              </button>
+              <button onClick={handleLogout} className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition text-sm">Sign Out</button>
             </div>
           </div>
         </div>
@@ -292,7 +384,7 @@ const AdminDashboard = () => {
         <nav className="flex space-x-1 bg-white rounded-lg p-1 shadow-sm mb-8 overflow-x-auto">
           {tabs.map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`px-4 py-2 rounded-md text-sm font-medium transition whitespace-nowrap ${
                 activeTab === tab.id ? "bg-emerald-600 text-white shadow-sm" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
               }`}>
               {tab.label}
@@ -560,9 +652,7 @@ const AdminDashboard = () => {
                           <p className="text-sm text-gray-500 mb-1">{v.email}</p>
                           {v.vendorProfile?.businessName && <p className="text-sm font-medium text-gray-700">Business: {v.vendorProfile.businessName}</p>}
                           {v.vendorProfile?.location && <p className="text-sm text-gray-500">Location: {v.vendorProfile.location}</p>}
-                          {v.vendorProfile?.businessDescription && (
-                            <p className="text-sm text-gray-600 mt-2 max-w-xl line-clamp-2">{v.vendorProfile.businessDescription}</p>
-                          )}
+                          {v.vendorProfile?.businessDescription && <p className="text-sm text-gray-600 mt-2 max-w-xl line-clamp-2">{v.vendorProfile.businessDescription}</p>}
                           {v.vendorProfile?.specialization && <p className="text-sm text-gray-500 mt-1">Specialization: {v.vendorProfile.specialization}</p>}
                           {v.vendorStatusNote && <p className="text-sm text-red-500 mt-2 italic">Note: {v.vendorStatusNote}</p>}
                           <p className="text-xs text-gray-400 mt-2">Applied: {new Date(v.createdAt).toLocaleDateString()}</p>
@@ -613,9 +703,7 @@ const AdminDashboard = () => {
                   {listings.map((listing) => (
                     <div key={listing._id} className="p-6">
                       <div className="flex items-start gap-4 flex-wrap">
-                        {listing.images?.[0] && (
-                          <img src={listing.images[0]} alt={listing.title} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
-                        )}
+                        {listing.images?.[0] && <img src={listing.images[0]} alt={listing.title} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-1 flex-wrap">
                             <p className="font-semibold text-gray-900">{listing.title}</p>
@@ -644,6 +732,239 @@ const AdminDashboard = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── BNB ── */}
+        {activeTab === "bnb" && (
+          <div className="space-y-8">
+            {/* Stats row */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { label: "Total BNBs", value: bnbListings.length },
+                { label: "Total Bookings", value: bnbBookings.length },
+                { label: "Pending Bookings", value: bnbBookings.filter((b) => b.status === "pending").length },
+                { label: "Revenue (KES)", value: bnbBookings.filter((b) => ["confirmed","completed"].includes(b.status)).reduce((s, b) => s + (b.totalAmount || 0), 0).toLocaleString() },
+              ].map((s) => (
+                <div key={s.label} className="bg-white rounded-xl shadow p-5">
+                  <p className="text-gray-500 text-sm">{s.label}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{s.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Create BNB */}
+            <div className="bg-white rounded-xl shadow">
+              <div className="px-6 py-4 border-b flex justify-between items-center">
+                <h2 className="text-lg font-semibold text-gray-900">Hillersons BNB Listings ({bnbListings.length})</h2>
+                <button
+                  onClick={() => setShowBnbForm(!showBnbForm)}
+                  className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 text-sm font-semibold transition"
+                >
+                  {showBnbForm ? "Cancel" : "+ Add BNB Listing"}
+                </button>
+              </div>
+
+              {/* BNB creation form */}
+              {showBnbForm && (
+                <form onSubmit={handleCreateBnb} className="p-6 border-b bg-gray-50 space-y-5">
+                  <h3 className="font-semibold text-gray-800">New BNB Listing (goes live immediately)</h3>
+
+                  {bnbFormError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{bnbFormError}</div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Title *</label>
+                      <input value={bnbForm.title} onChange={(e) => setBnbForm((f) => ({ ...f, title: e.target.value }))}
+                        placeholder="e.g. Hillersons Luxury Suite - Karen"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Location</label>
+                      <input value={bnbForm.location} onChange={(e) => setBnbForm((f) => ({ ...f, location: e.target.value }))}
+                        placeholder="e.g. Karen, Nairobi"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">County</label>
+                      <input value={bnbForm.county} onChange={(e) => setBnbForm((f) => ({ ...f, county: e.target.value }))}
+                        placeholder="e.g. Nairobi"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Town / Area</label>
+                      <input value={bnbForm.town} onChange={(e) => setBnbForm((f) => ({ ...f, town: e.target.value }))}
+                        placeholder="e.g. Karen"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Description *</label>
+                    <textarea value={bnbForm.description} onChange={(e) => setBnbForm((f) => ({ ...f, description: e.target.value }))}
+                      placeholder="Describe the property..."
+                      rows={3} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 resize-none" />
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Price/Night (KES) *</label>
+                      <input type="number" value={bnbForm.pricePerNight} onChange={(e) => setBnbForm((f) => ({ ...f, pricePerNight: e.target.value }))}
+                        placeholder="5000"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Max Guests</label>
+                      <input type="number" value={bnbForm.maxGuests} onChange={(e) => setBnbForm((f) => ({ ...f, maxGuests: e.target.value }))}
+                        placeholder="4" min="1"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Bedrooms</label>
+                      <input type="number" value={bnbForm.bedrooms} onChange={(e) => setBnbForm((f) => ({ ...f, bedrooms: e.target.value }))}
+                        placeholder="2" min="1"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Bathrooms</label>
+                      <input type="number" value={bnbForm.bathrooms} onChange={(e) => setBnbForm((f) => ({ ...f, bathrooms: e.target.value }))}
+                        placeholder="1" min="1"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Check-in Time</label>
+                      <input type="time" value={bnbForm.checkInTime} onChange={(e) => setBnbForm((f) => ({ ...f, checkInTime: e.target.value }))}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Check-out Time</label>
+                      <input type="time" value={bnbForm.checkOutTime} onChange={(e) => setBnbForm((f) => ({ ...f, checkOutTime: e.target.value }))}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Amenities</label>
+                    <div className="flex flex-wrap gap-2">
+                      {AMENITY_OPTIONS.map((a) => (
+                        <button key={a} type="button" onClick={() => toggleBnbAmenity(a)}
+                          className={`px-4 py-2 rounded-xl text-sm font-medium border-2 capitalize transition ${
+                            bnbForm.amenities.includes(a) ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-gray-200 text-gray-600 hover:border-emerald-300"
+                          }`}>
+                          {a}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">House Rules (one per line)</label>
+                    <textarea value={bnbForm.rules} onChange={(e) => setBnbForm((f) => ({ ...f, rules: e.target.value }))}
+                      placeholder="No smoking&#10;No pets&#10;No parties"
+                      rows={3} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 resize-none" />
+                  </div>
+
+                  <button type="submit" disabled={bnbFormLoading}
+                    className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition disabled:opacity-50">
+                    {bnbFormLoading ? "Creating..." : "Create BNB Listing"}
+                  </button>
+                </form>
+              )}
+
+              {/* BNB listings table */}
+              {bnbLoading ? <div className="p-8 text-center text-gray-400">Loading...</div>
+              : bnbListings.length === 0 ? <p className="p-6 text-gray-400">No BNB listings yet. Create your first one above.</p>
+              : (
+                <div className="divide-y">
+                  {bnbListings.map((l) => (
+                    <div key={l._id} className="px-6 py-4 flex items-center gap-4">
+                      {l.images?.[0] ? (
+                        <img src={l.images[0]} alt={l.title} className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-14 h-14 rounded-xl bg-gray-100 flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-800 truncate">{l.title}</p>
+                        <p className="text-xs text-gray-400">{[l.town, l.county].filter(Boolean).join(", ")}</p>
+                        <p className="text-sm font-medium text-emerald-700 mt-0.5">
+                          KES {(l.bnb?.pricePerNight || l.price || 0).toLocaleString()} / night
+                        </p>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${LISTING_STATUS_STYLES[l.status] || ""}`}>
+                        {l.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* All bookings */}
+            <div className="bg-white rounded-xl shadow">
+              <div className="px-6 py-4 border-b flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-lg font-semibold text-gray-900">All BNB Bookings ({bnbBookings.length})</h2>
+                <div className="flex gap-2">
+                  {["all","pending","confirmed","completed","cancelled"].map((f) => (
+                    <button key={f} onClick={() => setBnbBookingFilter(f)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition ${
+                        bnbBookingFilter === f ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}>
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {bnbLoading ? <div className="p-8 text-center text-gray-400">Loading...</div>
+              : filteredBnbBookings.length === 0 ? <p className="p-6 text-gray-400">No {bnbBookingFilter === "all" ? "" : bnbBookingFilter} bookings yet.</p>
+              : (
+                <div className="divide-y">
+                  {filteredBnbBookings.map((b) => {
+                    const guest = b.guestId;
+                    const checkIn = new Date(b.checkIn).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" });
+                    const checkOut = new Date(b.checkOut).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" });
+                    return (
+                      <div key={b._id} className="px-6 py-5">
+                        <div className="flex items-start justify-between gap-4 flex-wrap">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-1 flex-wrap">
+                              <p className="font-semibold text-gray-800 text-sm">{guest?.name || b.guestName}</p>
+                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${BOOKING_STATUS_STYLES[b.status] || ""}`}>{b.status}</span>
+                            </div>
+                            <p className="text-xs text-gray-400 mb-1">{guest?.email || b.guestEmail} {b.guestPhone && `· ${b.guestPhone}`}</p>
+                            <p className="text-xs text-gray-500 mb-2">
+                              Listing: <span className="font-medium">{b.listingId?.title || b.listingTitle}</span>
+                            </p>
+                            <div className="flex items-center gap-4 text-xs text-gray-500 flex-wrap">
+                              <span>{checkIn} → {checkOut}</span>
+                              <span>{b.nights} night{b.nights > 1 ? "s" : ""}</span>
+                              <span>{b.guests} guest{b.guests > 1 ? "s" : ""}</span>
+                              <span className="font-semibold text-emerald-700">KES {b.totalAmount?.toLocaleString()}</span>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${b.paymentStatus === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                                {b.paymentStatus === "paid" ? "Paid" : "Unpaid"}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 flex-shrink-0">
+                            {b.status === "pending" && (<>
+                              <button onClick={() => handleBnbBookingAction(b._id, "confirm")} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 transition">Confirm</button>
+                              <button onClick={() => handleBnbBookingAction(b._id, "reject")} className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-semibold hover:bg-red-200 transition">Reject</button>
+                            </>)}
+                            {b.status === "confirmed" && (
+                              <button onClick={() => handleBnbBookingAction(b._id, "complete")} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-200 transition">Complete</button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

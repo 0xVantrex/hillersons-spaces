@@ -6,7 +6,7 @@ const { v4: uuidv4 } = require("uuid");
 const verifyAuth = require("../middleware/auth");
 const verifyAdmin = require("../middleware/verifyAdmin");
 const Listing = require("../models/Listing");
-const { uploadSecure, validateImageContents } = require("../middleware/uploadSecure");
+const { uploadSecure, validateImageContents } = require("../middleware/Uploadsecure");
 
 // Configure Cloudinary
 cloudinary.config({
