@@ -1,143 +1,187 @@
-// routes/upload.js
+"use strict";
+
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const cloudinary = require("cloudinary").v2;
-const { v4: uuidv4 } = require("uuid");
+
 const verifyAuth = require("../middleware/auth");
 const verifyAdmin = require("../middleware/verifyAdmin");
 const Listing = require("../models/Listing");
 const { uploadSecure, validateImageContents } = require("../middleware/Uploadsecure");
 
-// Configure Cloudinary
+// ─────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// ── Helper: upload a single buffer to Cloudinary ──────────────────────────────
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+// Prevent exceeding max images
+const MAX_IMAGES = 15;
+
 const uploadToCloudinary = (buffer, folder) =>
   new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
         folder,
         resource_type: "image",
-        allowed_formats: ["jpg", "jpeg", "png", "webp"], // Cloudinary-side enforcement too
-        transformation: [{ quality: "auto", fetch_format: "auto" }], // auto-optimize
+        allowed_formats: ["jpg", "jpeg", "png", "webp"],
+        transformation: [{ quality: "auto", fetch_format: "auto" }],
       },
       (error, result) => {
-        if (error) reject(error);
-        else resolve(result.secure_url);
+        if (error) return reject(error);
+        resolve(result.secure_url);
       }
     );
     stream.end(buffer);
   });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// POST /api/upload/listing/:id
-// Upload images for a vendor listing
-// ── Vendor can only upload to their OWN listing ────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
+// Extract safe public_id
+const extractPublicId = (url) => {
+  try {
+    const parts = url.split("/upload/");
+    if (parts.length !== 2) return null;
+
+    const cleaned = parts[1]
+      .replace(/^v\d+\//, "")
+      .replace(/\.[^/.]+$/, "");
+
+    return cleaned;
+  } catch {
+    return null;
+  }
+};
+
+// ─────────────────────────────────────────────
+// UPLOAD TO LISTING (VENDOR)
+// ─────────────────────────────────────────────
 router.post(
   "/listing/:id",
   verifyAuth,
-  uploadSecure.array("images", 10), // field name: "images", max 10
+  uploadSecure.array("images", 10),
   validateImageContents,
   async (req, res) => {
     try {
+      if (!isValidId(req.params.id)) {
+        return res.status(400).json({ error: "Invalid ID" });
+      }
+
       if (!req.files || req.files.length === 0) {
         return res.status(400).json({ error: "No images uploaded" });
       }
 
-      // ── Ownership check ──────────────────────────────────────────────────────
       const listing = await Listing.findById(req.params.id);
       if (!listing) return res.status(404).json({ error: "Listing not found" });
 
-      // Vendors can only upload to their own listings
-      // Admins can upload to any listing
+      // Ownership check
       if (
         listing.sellerId.toString() !== req.user.id &&
         req.user.role !== "admin"
       ) {
-        return res.status(403).json({
-          error: "You are not authorized to upload images to this listing",
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      // Prevent image overflow (anti-DoS)
+      const currentCount = listing.images?.length || 0;
+      if (currentCount + req.files.length > MAX_IMAGES) {
+        return res.status(400).json({
+          error: `Max ${MAX_IMAGES} images allowed`,
         });
       }
 
-      // ── Isolated folder per vendor + listing ─────────────────────────────────
-      // Structure: hillersons/listings/{vendorId}/{listingId}/
-      // This means vendors can NEVER see or access each other's folders
       const folder = `hillersons/listings/${listing.sellerId}/${listing._id}`;
 
-      // ── Upload all files in parallel ─────────────────────────────────────────
+      // Upload in parallel
       const uploadedUrls = await Promise.all(
-        req.files.map((file) => uploadToCloudinary(file.buffer, folder))
+        req.files.map((file) =>
+          uploadToCloudinary(file.buffer, folder)
+        )
       );
 
-      // ── Append new URLs to listing.images ────────────────────────────────────
-      listing.images = [...(listing.images || []), ...uploadedUrls];
+      // Prevent duplicates
+      const uniqueNew = uploadedUrls.filter(
+        (url) => !(listing.images || []).includes(url)
+      );
+
+      listing.images = [...(listing.images || []), ...uniqueNew];
       await listing.save();
 
       res.json({
-        message: `${uploadedUrls.length} image(s) uploaded successfully`,
-        images: uploadedUrls,
-        allImages: listing.images,
+        message: `${uniqueNew.length} image(s) uploaded`,
+        images: uniqueNew,
+        total: listing.images.length,
       });
     } catch (err) {
-      console.error("Listing image upload error:", err);
-      res.status(500).json({ error: err.message });
+      console.error("UPLOAD ERROR:", err);
+      res.status(500).json({ error: "Server error" });
     }
   }
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// DELETE /api/upload/listing/:id/image
-// Remove a specific image from a listing
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────
+// DELETE IMAGE
+// ─────────────────────────────────────────────
 router.delete("/listing/:id/image", verifyAuth, async (req, res) => {
   try {
     const { imageUrl } = req.body;
-    if (!imageUrl) return res.status(400).json({ error: "imageUrl is required" });
+
+    if (!isValidId(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID" });
+    }
+
+    if (!imageUrl || typeof imageUrl !== "string") {
+      return res.status(400).json({ error: "Valid imageUrl required" });
+    }
 
     const listing = await Listing.findById(req.params.id);
     if (!listing) return res.status(404).json({ error: "Listing not found" });
 
-    // Ownership check
     if (
       listing.sellerId.toString() !== req.user.id &&
       req.user.role !== "admin"
     ) {
-      return res.status(403).json({ error: "Not authorized" });
+      return res.status(403).json({ error: "Unauthorized" });
     }
 
-    // Extract Cloudinary public_id from URL and delete
-    // URL format: https://res.cloudinary.com/{cloud}/image/upload/v{version}/{public_id}.{ext}
-    try {
-      const urlParts = imageUrl.split("/upload/");
-      if (urlParts.length === 2) {
-        const publicIdWithExt = urlParts[1].replace(/^v\d+\//, ""); // remove version
-        const publicId = publicIdWithExt.replace(/\.[^/.]+$/, ""); // remove extension
+    // Ensure image belongs to listing (prevents random deletion attempts)
+    if (!(listing.images || []).includes(imageUrl)) {
+      return res.status(400).json({ error: "Image not found in listing" });
+    }
+
+    const publicId = extractPublicId(imageUrl);
+
+    if (publicId) {
+      try {
         await cloudinary.uploader.destroy(publicId);
+      } catch (err) {
+        console.warn("Cloudinary delete failed:", err.message);
       }
-    } catch (cloudErr) {
-      console.warn("Cloudinary delete failed (continuing):", cloudErr.message);
     }
 
-    // Remove from listing
-    listing.images = (listing.images || []).filter((img) => img !== imageUrl);
+    listing.images = listing.images.filter((img) => img !== imageUrl);
     await listing.save();
 
-    res.json({ message: "Image removed", allImages: listing.images });
+    res.json({
+      message: "Image removed",
+      total: listing.images.length,
+    });
   } catch (err) {
-    console.error("Image delete error:", err);
-    res.status(500).json({ error: err.message });
+    console.error("DELETE ERROR:", err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// POST /api/upload/bnb/:id  (admin only — for Hillersons own BNBs)
-// Same as listing upload but only admin can use this
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────
+// ADMIN BNB UPLOAD
+// ─────────────────────────────────────────────
 router.post(
   "/bnb/:id",
   verifyAdmin,
@@ -145,31 +189,52 @@ router.post(
   validateImageContents,
   async (req, res) => {
     try {
+      if (!isValidId(req.params.id)) {
+        return res.status(400).json({ error: "Invalid ID" });
+      }
+
       if (!req.files || req.files.length === 0) {
         return res.status(400).json({ error: "No images uploaded" });
       }
 
-      const listing = await Listing.findOne({ _id: req.params.id, listingType: "bnb" });
-      if (!listing) return res.status(404).json({ error: "BNB listing not found" });
+      const listing = await Listing.findOne({
+        _id: req.params.id,
+        listingType: "bnb",
+      });
 
-      // Admin BNBs go in a dedicated admin folder
+      if (!listing) {
+        return res.status(404).json({ error: "BNB not found" });
+      }
+
+      const currentCount = listing.images?.length || 0;
+      if (currentCount + req.files.length > MAX_IMAGES) {
+        return res.status(400).json({
+          error: `Max ${MAX_IMAGES} images allowed`,
+        });
+      }
+
       const folder = `hillersons/bnb/admin/${listing._id}`;
 
       const uploadedUrls = await Promise.all(
-        req.files.map((file) => uploadToCloudinary(file.buffer, folder))
+        req.files.map((file) =>
+          uploadToCloudinary(file.buffer, folder)
+        )
       );
 
-      listing.images = [...(listing.images || []), ...uploadedUrls];
+      listing.images = [
+        ...(listing.images || []),
+        ...uploadedUrls,
+      ];
+
       await listing.save();
 
       res.json({
-        message: `${uploadedUrls.length} image(s) uploaded`,
-        images: uploadedUrls,
-        allImages: listing.images,
+        message: `${uploadedUrls.length} uploaded`,
+        total: listing.images.length,
       });
     } catch (err) {
-      console.error("BNB image upload error:", err);
-      res.status(500).json({ error: err.message });
+      console.error("BNB UPLOAD ERROR:", err);
+      res.status(500).json({ error: "Server error" });
     }
   }
 );

@@ -1,14 +1,19 @@
-const express = require("express");
-const Plan = require("../models/Plan");
+// routes/categories.js
+"use strict";
 
-const router = express.Router();
+const express = require("express");
+const router  = express.Router();
+const Plan    = require("../models/Plan");
 
 router.get("/", async (req, res) => {
   try {
     const categories = await Plan.aggregate([
       {
+        $match: { status: "approved" },
+      },
+      {
         $group: {
-          _id: { main: "$subCategoryGroup", sub: "$subCategory" },
+          _id:   { main: "$subCategoryGroup", sub: "$subCategory" },
           count: { $sum: 1 },
           image: { $first: "$planImageURLs" },
         },
@@ -18,7 +23,7 @@ router.get("/", async (req, res) => {
           _id: "$_id.main",
           subcategories: {
             $push: {
-              name: "$_id.sub",
+              name:  "$_id.sub",
               count: "$count",
               image: "$image",
             },
@@ -30,7 +35,8 @@ router.get("/", async (req, res) => {
 
     res.json(categories);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Categories fetch error:", err);
+    res.status(500).json({ error: "An unexpected error occurred." });
   }
 });
 

@@ -1,252 +1,287 @@
-//backend/routes/auth.js
-const express = require("express");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
+// backend/routes/auth.js
+"use strict";
+
+const express      = require("express");
+const bcrypt       = require("bcryptjs");
+const jwt          = require("jsonwebtoken");
+const crypto       = require("crypto");
+const nodemailer   = require("nodemailer");
 const { OAuth2Client } = require("google-auth-library");
-const router = express.Router();
-const nodemailer = require("nodemailer");
-const crypto = require("crypto");
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+const User        = require("../models/User");
 const verifyToken = require("../middleware/auth");
 
-// ── Helper: build JWT payload from user doc ───────────────────────────────────
+const router = express.Router();
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// ── Nodemailer transporter — created once at module load ───────
+const transporter = nodemailer.createTransport({
+  host:   process.env.SMTP_HOST,
+  port:   Number(process.env.SMTP_PORT),
+  secure: process.env.SMTP_SECURE === "true",
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+// ── Minimal JWT payload ────────────────────────────────────────
 const buildToken = (user) =>
   jwt.sign(
     {
-      id: user._id,
-      role: user.role || "user",
-      isAdmin: user.role === "admin",
-      vendorStatus: user.vendorStatus || "none",
-      name: user.name,
+      id:         user._id,
+      email:      user.email,
+      role:       user.role       || "user",
+      membership: user.membership || "free",
     },
     process.env.JWT_SECRET,
-    { expiresIn: "7d" }
+    { algorithm: "HS256", expiresIn: "7d" }
   );
 
-// ── Helper: build user response object ───────────────────────────────────────
 const buildUserResponse = (user) => ({
-  id: user._id,
-  email: user.email,
-  name: user.name,
-  role: user.role || "user",
-  isAdmin: user.role === "admin",
-  vendorStatus: user.vendorStatus || "none",
+  id:            user._id,
+  email:         user.email,
+  name:          user.name,
+  role:          user.role          || "user",
+  vendorStatus:  user.vendorStatus  || "none",
   vendorProfile: user.vendorProfile || null,
 });
 
-// ── Google Signup / Login ─────────────────────────────────────────────────────
+// ── Input helpers ──────────────────────────────────────────────
+const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+const isStrongPassword = (v) =>
+  typeof v === "string" &&
+  v.length >= 8 &&
+  v.length <= 128 &&
+  /[A-Z]/.test(v) &&
+  /[a-z]/.test(v) &&
+  /\d/.test(v);
+
+// ── Google Signup / Login ──────────────────────────────────────
 router.post("/google", async (req, res) => {
-  console.log("Google auth request received", req.body);
   const { tokenId } = req.body;
 
-  try {
-    const tokenPayload = JSON.parse(
-      Buffer.from(tokenId.split(".")[1], "base64url").toString()
-    );
+  if (!tokenId || typeof tokenId !== "string") {
+    return res.status(400).json({ message: "Token is required." });
+  }
 
-    const ticket = await client
-      .verifyIdToken({ idToken: tokenId, audience: process.env.GOOGLE_CLIENT_ID })
-      .catch((err) => {
-        if (err.message && err.message.includes("Token used too early")) {
-          console.warn("Clock skew detected — using decoded payload. Sync your server clock!");
-          if (tokenPayload.aud !== process.env.GOOGLE_CLIENT_ID) throw new Error("Token audience mismatch");
-          const now = Math.floor(Date.now() / 1000);
-          if (tokenPayload.exp && now > tokenPayload.exp) throw new Error("Token has expired");
-          return { getPayload: () => tokenPayload };
-        }
-        throw err;
-      });
+  try {
+    // No clock-skew fallback — if you see "Token used too early" errors,
+    // sync your server clock (ntpd / chronyc).
+    const ticket = await client.verifyIdToken({
+      idToken:  tokenId,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
 
     const payload = ticket.getPayload();
-    const { email, name } = payload;
+    const email   = payload.email?.toLowerCase().trim();
+    const name    = payload.name;
+
+    if (!email) {
+      return res.status(400).json({ message: "Google account has no email." });
+    }
 
     let user = await User.findOne({ email });
     if (!user) {
-      user = new User({ email, name, password: "" });
+      user = new User({ email, name });
       await user.save();
     }
 
     const token = buildToken(user);
-
-    res.status(200).json({
-      message: "Google signup/login successful",
-      token,
-      user: buildUserResponse(user),
-    });
-  } catch (error) {
-    console.error("Google auth error:", error.message);
-    res.status(500).json({ message: "Google authentication failed", error: error.message });
+    return res.status(200).json({ token, user: buildUserResponse(user) });
+  } catch {
+    return res.status(401).json({ message: "Google authentication failed." });
   }
 });
 
-// ── Email/Password Signup ─────────────────────────────────────────────────────
+// ── Signup ─────────────────────────────────────────────────────
 router.post("/signup", async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const email    = (req.body.email    || "").toLowerCase().trim();
+    const name     = (req.body.name     || "").trim().slice(0, 100);
+    const password =  req.body.password || "";
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ message: "User already exists" });
+    if (!email || !isValidEmail(email)) {
+      return res.status(400).json({ message: "Valid email is required." });
+    }
+    if (!name) {
+      return res.status(400).json({ message: "Name is required." });
+    }
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({
+        message: "Password must be 8–128 characters and include uppercase, lowercase, and a number.",
+      });
+    }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ message: "An account with this email already exists." });
+    }
 
-    const newUser = new User({ email, password: hashedPassword, name });
+    const hashed  = await bcrypt.hash(password, 12);
+    const newUser = new User({ email, name, password: hashed });
     await newUser.save();
 
     const token = buildToken(newUser);
-
-    res.status(201).json({
-      message: "Signup successful",
-      token,
-      user: buildUserResponse(newUser),
-    });
-  } catch (error) {
-    console.error("Signup error:", error);
-    res.status(500).json({ message: "Server error" });
+    return res.status(201).json({ token, user: buildUserResponse(newUser) });
+  } catch {
+    return res.status(500).json({ message: "Server error." });
   }
 });
 
-// ── Login ─────────────────────────────────────────────────────────────────────
+// ── Login ──────────────────────────────────────────────────────
 router.post("/login", async (req, res) => {
   try {
-    const email = (req.body.email || "").toLowerCase();
-    const { password } = req.body;
+    const email    = (req.body.email    || "").toLowerCase().trim();
+    const password =  req.body.password || "";
 
-    if (!email) return res.status(400).json({ message: "Email is required" });
-    if (!password) return res.status(400).json({ message: "Password is required" });
+    if (!email)    return res.status(400).json({ message: "Email is required." });
+    if (!password) return res.status(400).json({ message: "Password is required." });
 
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid email or password" });
+    // password has select:false on the model — must opt in explicitly here
+    const user = await User.findOne({ email }).select("+password");
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
 
-    if (!user.password) return res.status(400).json({ message: "Please log in with Google" });
+    if (!user.password) {
+      return res.status(400).json({ message: "This account uses Google sign-in." });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Invalid email or password" });
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
 
     const token = buildToken(user);
-
-    res.status(200).json({
-      message: "Login successful",
-      token,
-      user: buildUserResponse(user),
-    });
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ message: "Server error" });
+    return res.status(200).json({ token, user: buildUserResponse(user) });
+  } catch {
+    return res.status(500).json({ message: "Server error." });
   }
 });
 
-// ── Forgot Password ───────────────────────────────────────────────────────────
+// ── Forgot Password ────────────────────────────────────────────
 router.post("/forgot-password", async (req, res) => {
-  console.log("Forgot password route hit", req.body);
-  const { email } = req.body;
+  const email = (req.body.email || "").toLowerCase().trim();
+
+  if (!email || !isValidEmail(email)) {
+    return res.status(400).json({ message: "Valid email is required." });
+  }
+
+  // Uniform response regardless of whether the email exists — prevents enumeration
+  const SUCCESS_MSG = "If that email is registered, a reset link has been sent.";
 
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(200).json({ message: SUCCESS_MSG });
 
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    user.resetToken = resetToken;
-    user.resetTokenExpiry = Date.now() + 3600000;
+    const rawToken  = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+    user.resetTokenHash   = tokenHash;
+    user.resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
     await user.save();
 
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      secure: process.env.SMTP_SECURE === "true",
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    });
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${rawToken}`;
 
     await transporter.sendMail({
-      to: user.email,
-      subject: "Reset Your Password - Action Required",
+      to:      user.email,
+      subject: "Reset Your Password",
       html: `
-        <div style="max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333;">
-          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Password Reset Request</h1>
+        <div style="max-width:600px;margin:0 auto;font-family:sans-serif;color:#333">
+          <div style="background:#059669;padding:24px;text-align:center;border-radius:8px 8px 0 0">
+            <h1 style="color:#fff;margin:0;font-size:22px">Password Reset Request</h1>
           </div>
-          <div style="background: #ffffff; padding: 40px 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <p style="font-size: 16px; margin-bottom: 20px;">Hello,</p>
-            <p style="font-size: 16px; margin-bottom: 25px;">We received a request to reset the password for your account. Click the button below to create a new password.</p>
-            <div style="text-align: center; margin: 35px 0;">
-              <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+          <div style="background:#fff;padding:32px;border-radius:0 0 8px 8px">
+            <p>We received a request to reset your password. Click the button below to set a new one.</p>
+            <div style="text-align:center;margin:28px 0">
+              <a href="${resetUrl}"
+                style="background:#059669;color:#fff;padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:600">
                 Reset My Password
               </a>
             </div>
-            <p style="font-size: 14px; color: #666; margin-bottom: 20px;">
+            <p style="font-size:13px;color:#555">
               Or copy and paste this link:<br>
-              <span style="word-break: break-all; color: #10b981;">${resetUrl}</span>
+              <span style="word-break:break-all;color:#059669">${resetUrl}</span>
             </p>
-            <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; margin: 25px 0; border-radius: 4px;">
-              <p style="margin: 0; font-size: 14px; color: #047857;"><strong>Security Notice:</strong> This link expires in <strong>1 hour</strong>.</p>
-            </div>
-            <p style="font-size: 14px; color: #666;">If you didn't request this, you can safely ignore this email.</p>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-            <p style="font-size: 12px; color: #999;">This is an automated message, please do not reply.</p>
+            <p style="font-size:13px;color:#666;background:#ecfdf5;padding:12px;border-left:4px solid #059669;border-radius:4px">
+              This link expires in <strong>1 hour</strong>.
+            </p>
+            <p style="font-size:13px;color:#999">If you did not request this, you can safely ignore this email.</p>
           </div>
         </div>
       `,
     });
 
-    res.status(200).json({ message: "Password reset email sent" });
-  } catch (error) {
-    console.error("Forgot password error:", error);
-    res.status(500).json({ message: "Server error" });
+    return res.status(200).json({ message: SUCCESS_MSG });
+  } catch {
+    return res.status(500).json({ message: "Server error." });
   }
 });
 
-// ── Reset Password ────────────────────────────────────────────────────────────
+// ── Reset Password ─────────────────────────────────────────────
 router.post("/reset-password/:token", async (req, res) => {
-  const { token } = req.params;
-  const { password } = req.body;
+  const rawToken = req.params.token;
+  const password = req.body.password || "";
+
+  if (!rawToken || typeof rawToken !== "string") {
+    return res.status(400).json({ message: "Invalid reset link." });
+  }
+
+  if (!isStrongPassword(password)) {
+    return res.status(400).json({
+      message: "Password must be 8–128 characters and include uppercase, lowercase, and a number.",
+    });
+  }
 
   try {
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
     const user = await User.findOne({
-      resetToken: token,
-      resetTokenExpiry: { $gt: Date.now() },
+      resetTokenHash:   tokenHash,
+      resetTokenExpiry: { $gt: new Date() },
     });
 
-    if (!user) return res.status(400).json({ message: "Invalid or expired reset token" });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired reset link." });
+    }
 
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
-    user.resetToken = undefined;
+    user.password         = await bcrypt.hash(password, 12);
+    user.resetTokenHash   = undefined;
     user.resetTokenExpiry = undefined;
     await user.save();
 
-    res.status(200).json({ message: "Password reset successful" });
-  } catch (error) {
-    console.error("Reset password error:", error);
-    res.status(500).json({ message: "Server error" });
+    return res.status(200).json({ message: "Password reset successful." });
+  } catch {
+    return res.status(500).json({ message: "Server error." });
   }
 });
 
-// ── Get Profile ───────────────────────────────────────────────────────────────
+// ── Get Profile ────────────────────────────────────────────────
 router.get("/profile", verifyToken, async (req, res) => {
   try {
-    const user = await User.findById(req.userId)
+    const user = await User.findById(req.user.id)
+      .select("name email role vendorStatus vendorProfile phone profilePicture orders savedPlans createdAt")
       .populate("savedPlans", "_id title description price image")
       .lean();
 
-    if (!user) return res.status(404).json({ message: "User not found" });
-    res.json(user);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    return res.json(user);
+  } catch {
+    return res.status(500).json({ message: "Server error." });
   }
 });
 
-// ── Delete Account ────────────────────────────────────────────────────────────
+// ── Delete Account ─────────────────────────────────────────────
 router.delete("/delete", verifyToken, async (req, res) => {
   try {
-    await User.findByIdAndDelete(req.userId);
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    const deleted = await User.findByIdAndDelete(req.user.id);
+    if (!deleted) return res.status(404).json({ message: "User not found." });
+    return res.json({ success: true });
+  } catch {
+    return res.status(500).json({ message: "Server error." });
   }
 });
 

@@ -1,258 +1,296 @@
-// routes/listings.js
+"use strict";
+
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const Listing = require("../models/Listing");
-const verifyAuth = require("../middleware/auth");
+
+const verifyToken = require("../middleware/auth");
 const verifyAdmin = require("../middleware/verifyAdmin");
 const verifyVendor = require("../middleware/verifyVendor");
 
-// ── PUBLIC: Get approved listings (with filters) ──────────────────────────────
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+const escapeRegex = (str) =>
+  str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const pick = (obj, allowed) =>
+  Object.fromEntries(
+    Object.entries(obj).filter(([k]) => allowed.includes(k))
+  );
+
+const ALLOWED_FIELDS = [
+  "title",
+  "description",
+  "pricePerNight",
+  "images",
+  "location",
+  "county",
+  "town",
+  "maxGuests",
+  "bedrooms",
+  "bathrooms",
+  "amenities",
+  "checkInTime",
+  "checkOutTime",
+  "minimumStay",
+  "instantBook",
+  "rules",
+];
+
+// ─────────────────────────────────────────────
+// PUBLIC: GET ALL (FILTERED)
+// ─────────────────────────────────────────────
 router.get("/", async (req, res) => {
   try {
-    const {
-      listingType, county, town, featured,
-      minPrice, maxPrice, status, page = 1, limit = 20,
-    } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 10);
+    const skip = (page - 1) * limit;
 
     const filter = { status: "approved", active: true };
 
-    if (listingType) filter.listingType = listingType;
-    if (county) filter.county = county;
-    if (town) filter.town = new RegExp(town, "i");
-    if (featured === "true") filter.featured = true;
-    if (minPrice || maxPrice) {
-      filter.price = {};
-      if (minPrice) filter.price.$gte = Number(minPrice);
-      if (maxPrice) filter.price.$lte = Number(maxPrice);
+    if (req.query.county) {
+      filter.county = { $regex: escapeRegex(req.query.county), $options: "i" };
     }
 
-    const skip = (Number(page) - 1) * Number(limit);
+    if (req.query.town) {
+      filter.town = { $regex: escapeRegex(req.query.town), $options: "i" };
+    }
+
+    if (req.query.minPrice || req.query.maxPrice) {
+      filter.pricePerNight = {};
+      if (req.query.minPrice)
+        filter.pricePerNight.$gte = Number(req.query.minPrice);
+      if (req.query.maxPrice)
+        filter.pricePerNight.$lte = Number(req.query.maxPrice);
+    }
+
     const [listings, total] = await Promise.all([
       Listing.find(filter)
-        .sort({ featured: -1, createdAt: -1 })
+        .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(Number(limit))
-        .populate("sellerId", "name email phone profilePicture"),
+        .limit(limit)
+        .populate("sellerId", "name profilePicture"),
       Listing.countDocuments(filter),
     ]);
 
-    res.json({
-      listings,
-      total,
-      page: Number(page),
-      pages: Math.ceil(total / Number(limit)),
-    });
+    res.json({ listings, total, page });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// ── PUBLIC: Get single listing ─────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// PUBLIC: GET ONE + ATOMIC VIEW INCREMENT
+// ─────────────────────────────────────────────
 router.get("/:id", async (req, res) => {
   try {
-    const listing = await Listing.findById(req.params.id)
-      .populate("sellerId", "name email phone profilePicture vendorProfile");
-    if (!listing) return res.status(404).json({ error: "Listing not found" });
+    if (!isValidId(req.params.id))
+      return res.status(400).json({ error: "Invalid ID" });
 
-    // Increment view count
-    listing.views_count = (listing.views_count || 0) + 1;
-    await listing.save();
+    const listing = await Listing.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views_count: 1 } },
+      { new: true }
+    ).populate("sellerId", "name profilePicture");
+
+    if (!listing) return res.status(404).json({ error: "Not found" });
 
     res.json(listing);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// ── VENDOR: Create listing (goes to pending) ───────────────────────────────────
-router.post("/", verifyVendor, async (req, res) => {
+// ─────────────────────────────────────────────
+// VENDOR: CREATE
+// ─────────────────────────────────────────────
+router.post("/", verifyToken, verifyVendor, async (req, res) => {
   try {
+    const data = pick(req.body, ALLOWED_FIELDS);
+
+    if (!data.title || !data.pricePerNight || !data.maxGuests) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
     const listing = new Listing({
-      ...req.body,
+      ...data,
       sellerId: req.user.id,
-      sellerName: req.user.name,
-      sellerEmail: req.user.email,
-      status: "pending", // always pending until admin approves
+      status: "pending",
     });
+
     await listing.save();
-    res.status(201).json({ message: "Listing submitted for approval.", listing });
+
+    res.status(201).json({ message: "Submitted", listing });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// ── VENDOR: Update own listing ─────────────────────────────────────────────────
-router.patch("/:id", verifyVendor, async (req, res) => {
+// ─────────────────────────────────────────────
+// VENDOR: UPDATE
+// ─────────────────────────────────────────────
+router.patch("/:id", verifyToken, verifyVendor, async (req, res) => {
   try {
+    if (!isValidId(req.params.id))
+      return res.status(400).json({ error: "Invalid ID" });
+
     const listing = await Listing.findById(req.params.id);
-    if (!listing) return res.status(404).json({ error: "Listing not found" });
+    if (!listing) return res.status(404).json({ error: "Not found" });
 
-    // Vendors can only edit their own listings; admins can edit any
-    if (
-      listing.sellerId.toString() !== req.user.id &&
-      req.user.role !== "admin"
-    ) {
-      return res.status(403).json({ error: "Not authorized to edit this listing." });
+    if (listing.sellerId.toString() !== req.user.id) {
+      return res.status(403).json({ error: "Unauthorized" });
     }
 
-    // Editing a live listing re-triggers approval
-    if (listing.status === "approved" && req.user.role !== "admin") {
-      req.body.status = "pending";
+    const updates = pick(req.body, ALLOWED_FIELDS);
+
+    if (listing.status === "approved") {
+      updates.status = "pending";
     }
 
-    Object.assign(listing, req.body);
+    Object.assign(listing, updates);
     await listing.save();
+
     res.json(listing);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// ── VENDOR: Delete own listing ─────────────────────────────────────────────────
-router.delete("/:id", verifyAuth, async (req, res) => {
+// ─────────────────────────────────────────────
+// DELETE
+// ─────────────────────────────────────────────
+router.delete("/:id", verifyToken, async (req, res) => {
   try {
+    if (!isValidId(req.params.id))
+      return res.status(400).json({ error: "Invalid ID" });
+
     const listing = await Listing.findById(req.params.id);
-    if (!listing) return res.status(404).json({ error: "Listing not found" });
+    if (!listing) return res.status(404).json({ error: "Not found" });
 
     if (
       listing.sellerId.toString() !== req.user.id &&
       req.user.role !== "admin"
     ) {
-      return res.status(403).json({ error: "Not authorized." });
+      return res.status(403).json({ error: "Unauthorized" });
     }
 
     await listing.deleteOne();
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// ── ADMIN: Get ALL listings including pending/rejected ────────────────────────
-router.get("/admin/all", verifyAdmin, async (req, res) => {
+// ─────────────────────────────────────────────
+// LIKE (ATOMIC)
+// ─────────────────────────────────────────────
+router.patch("/:id/like", verifyToken, async (req, res) => {
   try {
-    const { status, listingType, page = 1, limit = 50 } = req.query;
-    const filter = {};
-    if (status) filter.status = status;
-    if (listingType) filter.listingType = listingType;
+    if (!isValidId(req.params.id))
+      return res.status(400).json({ error: "Invalid ID" });
 
-    const skip = (Number(page) - 1) * Number(limit);
-    const [listings, total] = await Promise.all([
-      Listing.find(filter)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .populate("sellerId", "name email role vendorProfile"),
-      Listing.countDocuments(filter),
-    ]);
-
-    res.json({ listings, total, page: Number(page), pages: Math.ceil(total / Number(limit)) });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── ADMIN: Approve listing ────────────────────────────────────────────────────
-router.patch("/admin/:id/approve", verifyAdmin, async (req, res) => {
-  try {
-    const listing = await Listing.findByIdAndUpdate(
-      req.params.id,
+    const result = await Listing.updateOne(
+      { _id: req.params.id, likedBy: { $ne: req.user.id } },
       {
-        status: "approved",
-        approvedAt: new Date(),
-        approvedBy: req.user.id,
-        rejectionNote: null,
-      },
-      { new: true }
+        $inc: { likes_count: 1 },
+        $addToSet: { likedBy: req.user.id },
+      }
     );
-    if (!listing) return res.status(404).json({ error: "Listing not found" });
-    res.json({ message: "Listing approved.", listing });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
-// ── ADMIN: Reject listing ─────────────────────────────────────────────────────
-router.patch("/admin/:id/reject", verifyAdmin, async (req, res) => {
-  try {
-    const { note } = req.body;
-    const listing = await Listing.findByIdAndUpdate(
-      req.params.id,
-      { status: "rejected", rejectionNote: note || "No reason provided." },
-      { new: true }
-    );
-    if (!listing) return res.status(404).json({ error: "Listing not found" });
-    res.json({ message: "Listing rejected.", listing });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── ADMIN: Toggle featured ────────────────────────────────────────────────────
-router.patch("/admin/:id/featured", verifyAdmin, async (req, res) => {
-  try {
-    const { featured, featuredUntil } = req.body;
-    const listing = await Listing.findByIdAndUpdate(
-      req.params.id,
-      { featured, featuredUntil: featuredUntil || null },
-      { new: true }
-    );
-    res.json(listing);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── AUTH: Like a listing ──────────────────────────────────────────────────────
-router.patch("/:id/like", verifyAuth, async (req, res) => {
-  try {
-    const listing = await Listing.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { likes_count: 1 } },
-      { new: true }
-    );
-    res.json(listing);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── AUTH: Add review ──────────────────────────────────────────────────────────
-router.post("/:id/review", verifyAuth, async (req, res) => {
-  try {
-    const { rating, comment } = req.body;
-    const listing = await Listing.findById(req.params.id);
-    if (!listing) return res.status(404).json({ error: "Listing not found" });
-
-    // One review per user
-    const existing = listing.reviews.find(
-      (r) => r.userId.toString() === req.user.id
-    );
-    if (existing) {
-      return res.status(400).json({ error: "You have already reviewed this listing." });
+    if (result.modifiedCount === 0) {
+      return res.status(400).json({ error: "Already liked" });
     }
 
-    listing.reviews.push({
-      userId: req.user.id,
-      userName: req.user.name,
-      rating,
-      comment,
-    });
-    listing.updateAverageRating();
-    await listing.save();
-    res.json(listing);
+    res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// ── VENDOR: Get own listings ──────────────────────────────────────────────────
-router.get("/vendor/mine", verifyVendor, async (req, res) => {
+// ─────────────────────────────────────────────
+// REVIEW (ATOMIC, NO DUPLICATES)
+// ─────────────────────────────────────────────
+router.post("/:id/review", verifyToken, async (req, res) => {
   try {
-    const listings = await Listing.find({ sellerId: req.user.id }).sort({ createdAt: -1 });
-    res.json(listings);
+    const { rating, comment } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: "Invalid rating" });
+    }
+
+    const result = await Listing.updateOne(
+      { _id: req.params.id, "reviews.userId": { $ne: req.user.id } },
+      {
+        $push: {
+          reviews: {
+            userId: req.user.id,
+            userName: req.user.name,
+            rating,
+            comment,
+          },
+        },
+      }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(400).json({ error: "Already reviewed" });
+    }
+
+    res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─────────────────────────────────────────────
+// BOOKING (ANTI-OVERLAP)
+// ─────────────────────────────────────────────
+router.post("/:id/book", verifyToken, async (req, res) => {
+  try {
+    const { checkIn, checkOut } = req.body;
+
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+
+    if (start >= end) {
+      return res.status(400).json({ error: "Invalid dates" });
+    }
+
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ error: "Not found" });
+
+    const overlap = listing.bookings.some(
+      (b) => start < b.checkOut && end > b.checkIn
+    );
+
+    if (overlap) {
+      return res.status(400).json({ error: "Dates unavailable" });
+    }
+
+    listing.bookings.push({
+      checkIn: start,
+      checkOut: end,
+      bookedBy: req.user.id,
+      status: "pending",
+    });
+
+    await listing.save();
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 

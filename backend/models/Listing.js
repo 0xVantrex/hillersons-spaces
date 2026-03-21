@@ -1,213 +1,210 @@
-// models/Listing.js
+"use strict";
+
 const mongoose = require("mongoose");
 
-// ── Shared review sub-schema ──────────────────────────────────────────────────
+// ── Review Schema (LIMITED + OPTIMIZED) ────────────────────────
 const ReviewSchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    userName: String,
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+    userName: { type: String, maxlength: 100, trim: true },
     rating: { type: Number, min: 1, max: 5, required: true },
-    comment: String,
-    createdAt: { type: Date, default: Date.now },
+    comment: { type: String, maxlength: 1000, trim: true },
   },
-  { _id: true }
+  { timestamps: true }
 );
 
-// ── BNB availability block ────────────────────────────────────────────────────
-const BookingBlockSchema = new mongoose.Schema(
+// ── Booking Schema (SEPARATE-READY DESIGN) ─────────────────────
+const BookingSchema = new mongoose.Schema(
   {
-    checkIn: { type: Date, required: true },
-    checkOut: { type: Date, required: true },
-    bookedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    checkIn: { type: Date, required: true, index: true },
+    checkOut: { type: Date, required: true, index: true },
+    bookedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     status: {
       type: String,
       enum: ["pending", "confirmed", "cancelled"],
       default: "pending",
     },
   },
-  { _id: true }
+  { timestamps: true }
 );
 
-// ── Main Listing schema ───────────────────────────────────────────────────────
+// ── MAIN BNB LISTING ───────────────────────────────────────────
 const ListingSchema = new mongoose.Schema(
   {
-    // ── Common fields (all listing types) ──
-    title: { type: String, required: true },
-    description: { type: String },
-    price: { type: Number },
-    images: [String],          // main display images
-    documents: [String],       // PDFs, title deeds, etc.
-    location: { type: String },
-    county: { type: String },  // Kenyan county
-    town: { type: String },
-
-    // Listing type — drives which type-specific fields are used
-    listingType: {
+    title: {
       type: String,
       required: true,
-      enum: [
-        "housePlan",
-        "land",
-        "house",
-        "bnb",
-        "book",
-        "service",
+      maxlength: 200,
+      trim: true,
+    },
+
+    description: {
+      type: String,
+      maxlength: 3000,
+      trim: true,
+    },
+
+    pricePerNight: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    images: {
+      type: [String],
+      validate: [
+        (v) => v.length <= 15,
+        "Max 15 images",
       ],
     },
 
-    // Owner (vendor/admin who posted it)
+    location: {
+      type: String,
+      maxlength: 200,
+      trim: true,
+    },
+
+    county: {
+      type: String,
+      maxlength: 100,
+      trim: true,
+      lowercase: true,
+      index: true,
+    },
+
+    town: {
+      type: String,
+      maxlength: 100,
+      trim: true,
+      lowercase: true,
+      index: true,
+    },
+
     sellerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
-    sellerName: String,
-    sellerEmail: String,
-    sellerPhone: String,
 
-    // Admin approval
+    // 🔥 REMOVE email duplication → safer
+    // sellerEmail REMOVED
+
+    maxGuests: { type: Number, min: 1, required: true },
+    bedrooms: { type: Number, min: 0 },
+    bathrooms: { type: Number, min: 0 },
+
+    amenities: {
+      type: [String],
+      validate: [(v) => v.length <= 30, "Max 30 amenities"],
+    },
+
+    checkInTime: {
+      type: String,
+      match: [/^\d{2}:\d{2}$/, "HH:MM format"],
+    },
+
+    checkOutTime: {
+      type: String,
+      match: [/^\d{2}:\d{2}$/, "HH:MM format"],
+    },
+
+    minimumStay: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
+
+    instantBook: {
+      type: Boolean,
+      default: false,
+    },
+
+    rules: {
+      type: [String],
+      validate: [(v) => v.length <= 20, "Max 20 rules"],
+    },
+
+    // ── STATUS CONTROL ─────────────────
     status: {
       type: String,
-      enum: ["draft", "pending", "approved", "rejected", "archived"],
+      enum: ["pending", "approved", "rejected"],
       default: "pending",
-    },
-    rejectionNote: { type: String },  // admin fills this on rejection
-    approvedAt: { type: Date },
-    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-
-    // Visibility
-    featured: { type: Boolean, default: false },
-    featuredUntil: { type: Date },    // expiry for paid featured slots
-    premium: { type: Boolean, default: false },
-    active: { type: Boolean, default: true },
-
-    // Engagement
-    likes_count: { type: Number, default: 0 },
-    views_count: { type: Number, default: 0 },
-    reviews: [ReviewSchema],
-    averageRating: { type: Number, default: 0 },
-
-    // ── House Plan fields ──
-    housePlan: {
-      rooms: String,
-      floorCount: String,
-      area: String,
-      subCategory: String,
-      subCategoryGroup: String,
-      planImageURLs: [String],   // blueprint images
-      finalImageURLs: [String],  // finished project images
-      style: String,             // e.g. "modern", "bungalow", "maisonette"
+      index: true,
     },
 
-    // ── Land fields ──
-    land: {
-      sizeAcres: Number,
-      sizeSqft: Number,
-      titleDeedStatus: {
-        type: String,
-        enum: ["freehold", "leasehold", "allotment", "none"],
-      },
-      zoning: String,       // e.g. "residential", "commercial", "agricultural"
-      roadAccess: Boolean,
-      waterAccess: Boolean,
-      electricityAccess: Boolean,
+    active: {
+      type: Boolean,
+      default: true,
+      index: true,
     },
 
-    // ── House/Property fields ──
-    house: {
-      bedrooms: Number,
-      bathrooms: Number,
-      parkingSpaces: Number,
-      amenities: [String],   // e.g. ["pool", "gym", "borehole"]
-      furnished: Boolean,
-      propertyType: {
-        type: String,
-        enum: ["apartment", "bungalow", "maisonette", "villa", "townhouse", "commercial"],
-      },
-      saleOrRent: {
-        type: String,
-        enum: ["sale", "rent"],
-        default: "sale",
-      },
-      monthlyRent: Number,   // if rent
+    // ── STATS (ATOMIC SAFE) ────────────
+    likes_count: { type: Number, default: 0, min: 0 },
+    views_count: { type: Number, default: 0, min: 0 },
+
+    // ── LIMITED REVIEWS (ANTI-DOS) ─────
+    reviews: {
+      type: [ReviewSchema],
+      validate: [(v) => v.length <= 200, "Max 200 reviews"],
     },
 
-    // ── BNB fields ──
-    bnb: {
-      maxGuests: Number,
-      bedrooms: Number,
-      bathrooms: Number,
-      amenities: [String],
-      checkInTime: String,   // e.g. "14:00"
-      checkOutTime: String,  // e.g. "11:00"
-      pricePerNight: Number,
-      minimumStay: { type: Number, default: 1 },
-      bookings: [BookingBlockSchema],
-      rules: [String],       // e.g. ["No smoking", "No pets"]
-      instantBook: { type: Boolean, default: false },
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
     },
 
-    // ── Book fields ──
-    book: {
-      author: String,
-      genre: String,
-      isbn: String,
-      pages: Number,
-      publishedYear: Number,
-      fileUrl: String,       // for digital downloads
-      physicalCopy: Boolean, // true if sold as physical
-      language: { type: String, default: "English" },
-    },
-
-    // ── Service/Contractor fields ──
-    service: {
-      serviceType: {
-        type: String,
-        enum: [
-          "construction",
-          "roofing",
-          "plumbing",
-          "electrical",
-          "interior",
-          "landscaping",
-          "surveying",
-          "architecture",
-          "other",
-        ],
-      },
-      packages: [
-        {
-          name: String,
-          description: String,
-          price: Number,
-          deliveryDays: Number,
-        },
-      ],
-      portfolio: [String],       // image URLs of past work
-      yearsExperience: Number,
-      licenseNumber: String,
-      operatingCounties: [String],
+    // ── BOOKINGS (TEMP — move later) ───
+    bookings: {
+      type: [BookingSchema],
+      validate: [(v) => v.length <= 300, "Max 300 bookings"],
     },
   },
   { timestamps: true }
 );
 
-// ── Indexes for fast filtering ─────────────────────────────────────────────────
-ListingSchema.index({ listingType: 1, status: 1 });
-ListingSchema.index({ sellerId: 1 });
-ListingSchema.index({ featured: 1 });
-ListingSchema.index({ county: 1, town: 1 });
-ListingSchema.index({ createdAt: -1 });
 
-// ── Auto-update averageRating when reviews change ─────────────────────────────
-ListingSchema.methods.updateAverageRating = function () {
+// ── INDEXES (ANTI-DOS + PERFORMANCE) ───────────────────────────
+ListingSchema.index({ county: 1, town: 1 });
+ListingSchema.index({ pricePerNight: 1 });
+ListingSchema.index({ createdAt: -1 });
+ListingSchema.index({ status: 1, active: 1 });
+ListingSchema.index({ "reviews.userId": 1 });
+
+
+// ── PRE-SAVE: AVG RATING SAFE ──────────────────────────────────
+ListingSchema.pre("save", function (next) {
+  if (!this.isModified("reviews")) return next();
+
   if (this.reviews.length === 0) {
     this.averageRating = 0;
   } else {
     const total = this.reviews.reduce((sum, r) => sum + r.rating, 0);
     this.averageRating = +(total / this.reviews.length).toFixed(1);
   }
+
+  next();
+});
+
+
+// ── STATIC: SAFE BOOKING CHECK (ANTI-DOUBLE BOOK) ──────────────
+ListingSchema.methods.isAvailable = function (newStart, newEnd) {
+  return !this.bookings.some((b) => {
+    return newStart < b.checkOut && newEnd > b.checkIn;
+  });
 };
+
 
 module.exports =
   mongoose.models.Listing || mongoose.model("Listing", ListingSchema);

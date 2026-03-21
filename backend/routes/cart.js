@@ -1,89 +1,102 @@
-const express = require("express");
-const verifyToken = require("../middleware/auth"); 
-const Cart = require("../models/Cart");
+// routes/cart.js
+"use strict";
 
-const router = express.Router();
+const express     = require("express");
+const router      = express.Router();
+const Cart        = require("../models/Cart");
+const verifyToken = require("../middleware/auth");
 
-// Get logged-in user's cart
+const MAX_CART_ITEMS = 100;
+const SESSION_ID_RE  = /^[a-zA-Z0-9_-]{8,128}$/;
+
+const internalError = (res) =>
+  res.status(500).json({ error: "An unexpected error occurred." });
+
+// ── Get authenticated user's cart ──────────────────────────────
 router.get("/", verifyToken, async (req, res) => {
-  console.log("Cart request hit! userId:", req.user.id);
   try {
-    let cart = await Cart.findOne({ userId: req.user.id });
-    if (!cart) cart = await Cart.create({ userId: req.user.id, items: [] });
-    res.json(cart);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch cart" });
+    const cart = await Cart.findOne({ userId: req.user.id }).lean();
+    res.json(cart || { userId: req.user.id, items: [] });
+  } catch {
+    internalError(res);
   }
 });
 
-// Update and/or replace cart
+// ── Replace authenticated user's cart ─────────────────────────
 router.post("/", verifyToken, async (req, res) => {
   try {
-    console.log("Incoming cart body:", req.body);
     const { items } = req.body;
-    let cart = await Cart.findOneAndUpdate(
+
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ error: "items must be an array." });
+    }
+    if (items.length > MAX_CART_ITEMS) {
+      return res.status(400).json({ error: `Cart cannot exceed ${MAX_CART_ITEMS} items.` });
+    }
+
+    const cart = await Cart.findOneAndUpdate(
       { userId: req.user.id },
       { items },
       { new: true, upsert: true }
     );
+
     res.json(cart);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to save cart" });
+  } catch {
+    internalError(res);
   }
 });
 
-// Guest cart endpoint
+// ── Save guest cart ────────────────────────────────────────────
 router.post("/guest", async (req, res) => {
   try {
-    console.log("Guest cart save: ", req.body);
     const { items, sessionId } = req.body;
 
-    if (!items || items.length === 0) {
-      return res.json({ success: true, message: "Empty cart ignored" });
+    if (!sessionId || !SESSION_ID_RE.test(sessionId)) {
+      return res.status(400).json({ error: "A valid sessionId is required." });
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.json({ success: true, message: "Empty cart ignored." });
+    }
+    if (items.length > MAX_CART_ITEMS) {
+      return res.status(400).json({ error: `Cart cannot exceed ${MAX_CART_ITEMS} items.` });
     }
 
-    let guestCart = await Cart.findOneAndUpdate(
-      { sessionId }, 
-      {
-        items,
-        sessionId,
-        userId: null, 
-      },
+    // Only match guest documents — do not overwrite carts that belong to a user
+    const cart = await Cart.findOneAndUpdate(
+      { sessionId, userId: null },
+      { items, sessionId },
       { new: true, upsert: true }
     );
 
-    res.json({ success: true, message: "Guest cart saved", cart: guestCart });
-  } catch (err) {
-    console.error("Guest cart save error:", err);
-    res.status(500).json({ error: "Failed to save guest cart" });
+    res.json({ success: true, cart });
+  } catch {
+    internalError(res);
   }
 });
 
-// Get guest cart - RETRIEVE
+// ── Get guest cart ─────────────────────────────────────────────
 router.get("/guest", async (req, res) => {
   try {
     const { sessionId } = req.query;
 
-    // Find guest cart by sessionId
-    const guestCart = await Cart.findOne({ sessionId });
-
-    if (guestCart) {
-      res.json({ items: guestCart.items || [] });
-    } else {
-      res.json({ items: [] }); // Return empty if no cart found
+    if (!sessionId || !SESSION_ID_RE.test(sessionId)) {
+      return res.status(400).json({ error: "A valid sessionId is required." });
     }
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch guest cart" });
+
+    const cart = await Cart.findOne({ sessionId, userId: null }).lean();
+    res.json({ items: cart?.items || [] });
+  } catch {
+    internalError(res);
   }
 });
 
-// Clear cart
+// ── Clear authenticated user's cart ───────────────────────────
 router.delete("/", verifyToken, async (req, res) => {
   try {
-    await Cart.findOneAndDelete({ userId: req.user.id }, { items: [] });
+    await Cart.findOneAndDelete({ userId: req.user.id });
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to clear cart" });
+  } catch {
+    internalError(res);
   }
 });
 

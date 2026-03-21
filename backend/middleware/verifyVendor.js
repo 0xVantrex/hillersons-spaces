@@ -1,35 +1,36 @@
 // middleware/verifyVendor.js
-// Allows approved vendors, BNB hosts, contractors, and admins
-const jwt = require("jsonwebtoken");
+"use strict";
 
-const VENDOR_ROLES = ["vendor", "bnbHost", "contractor", "admin"];
+const User = require("../models/User");
 
-module.exports = function verifyVendor(req, res, next) {
+const VENDOR_ROLES = new Set(["vendor", "bnbHost", "contractor", "admin"]);
+
+module.exports = async function verifyVendor(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ message: "Access denied. No token provided." });
+  }
+
+  if (!VENDOR_ROLES.has(req.user.role)) {
+    return res.status(403).json({ message: "Access denied. Vendor account required." });
+  }
+
+  if (req.user.role === "admin") {
+    return next();
+  }
+
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Access denied. No token provided." });
-    }
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(req.user.id).select("vendorStatus").lean();
 
-    if (!VENDOR_ROLES.includes(decoded.role)) {
-      return res.status(403).json({
-        message: "Access denied. Vendor account required.",
-      });
+    if (!user) {
+      return res.status(401).json({ message: "Access denied. Account not found." });
     }
 
-    // Non-admin vendors must be approved
-    if (decoded.role !== "admin" && decoded.vendorStatus !== "approved") {
-      return res.status(403).json({
-        message: "Your vendor account is pending approval.",
-        vendorStatus: decoded.vendorStatus,
-      });
+    if (user.vendorStatus !== "approved") {
+      return res.status(403).json({ message: "Your vendor account is pending approval." });
     }
 
-    req.user = decoded;
     next();
-  } catch (err) {
-    return res.status(401).json({ message: "Invalid or expired token." });
+  } catch {
+    return res.status(500).json({ message: "Internal server error." });
   }
 };
