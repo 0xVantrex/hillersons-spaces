@@ -572,9 +572,7 @@ const HomePage = () => {
       >
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 sm:mb-16">
           <div className="max-w-2xl">
-            <span className="inline-block bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full text-xs sm:text-sm font-bold mb-4 sm:mb-6 shadow-lg">
-              ⭐ FREE SELECTION
-            </span>
+            
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-emerald-900 mb-4 sm:mb-6">
               Featured{" "}
               <span className="bg-gradient-to-r from-lime-600 to-emerald-600 bg-clip-text text-transparent">
@@ -703,7 +701,7 @@ const HomePage = () => {
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center max-w-4xl mx-auto mb-16 sm:mb-20">
             <span className="inline-block bg-white/20 backdrop-blur-xl px-4 sm:px-6 py-2 sm:py-3 rounded-full text-xs sm:text-sm font-bold mb-4 sm:mb-6 border border-white/30">
-              ⭐ CLIENT TESTIMONIALS
+               CLIENT TESTIMONIALS
             </span>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-6">
               What Our{" "}
@@ -756,11 +754,11 @@ const HomePage = () => {
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-5xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 sm:gap-3 bg-white/60 backdrop-blur-md rounded-full px-4 sm:px-6 py-2 sm:py-3 mb-6 sm:mb-8 border border-lime-100 shadow-sm">
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-lime-500 animate-pulse" />
+              
               <span className="text-xs sm:text-sm font-bold text-lime-600">
                 START YOUR JOURNEY TODAY
               </span>
-              <Diamond className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
+            
             </div>
 
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 sm:mb-8 leading-tight text-emerald-500">
