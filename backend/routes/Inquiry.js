@@ -1,9 +1,8 @@
 const express = require("express");
 const Inquiry = require("../models/Inquiry");
-
 const router = express.Router();
 
-// new inquiry
+// Create new inquiry
 router.post("/", async (req, res) => {
   try {
     const inquiry = await Inquiry.create(req.body);
@@ -12,6 +11,7 @@ router.post("/", async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 });
+
 // Get all inquiries
 router.get("/", async (req, res) => {
   try {
@@ -21,18 +21,29 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// Update inquiry by ID
+
+// Update inquiry status
 router.patch("/:id", async (req, res) => {
   try {
     const inquiry = await Inquiry.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
     });
-    if (!inquiry) {
-      return res.status(404).json({ error: "Inquiry not found" });
-    }
+    if (!inquiry) return res.status(404).json({ error: "Inquiry not found" });
     res.json(inquiry);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Delete inquiry
+router.delete("/:id", async (req, res) => {
+  try {
+    const inquiry = await Inquiry.findByIdAndDelete(req.params.id);
+    if (!inquiry) return res.status(404).json({ error: "Inquiry not found" });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

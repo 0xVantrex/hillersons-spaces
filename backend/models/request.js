@@ -8,6 +8,11 @@ const requestSchema = new mongoose.Schema({
   rooms: String,
   budget: String,
   description: String,
+  status: {
+    type: String,
+    enum: ["new", "contacted", "in-progress", "completed"],
+    default: "new",
+  },
   createdAt: { type: Date, default: Date.now },
 });
 
