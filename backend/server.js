@@ -5,11 +5,8 @@ require("dotenv").config();
 
 const app = express();
 
-// -------------------
-// CORS Middleware
-// -------------------
 
-// Add all your frontend URLs here
+// frontend URLs
 const allowedOrigins = [
   "http://localhost:5173",  //Testing
   "https://hillersonsspaces.vercel.app",       // Production
@@ -20,7 +17,7 @@ app.use(
     origin: function(origin, callback) {
       if (!origin) return callback(null, true);
 
-      //
+      
       const normalizedOrigin = origin.replace(/\/$/, "");
 
       if (allowedOrigins.includes(normalizedOrigin)) {
@@ -37,9 +34,7 @@ app.use(
 // JSON body parsing
 app.use(express.json());
 
-// -------------------
 // Routes
-// -------------------
 
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/plans", require("./routes/plans"));
@@ -55,9 +50,7 @@ app.get("/", (req, res) => {
   res.send("🔥 Backend API is up and running");
 });
 
-// -------------------
 // MongoDB + Server
-// -------------------
 
 const PORT = process.env.PORT || 5000;
 
@@ -67,7 +60,6 @@ mongoose
     console.log("✅ Connected to MongoDB");
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`✅ Backend running on http://0.0.0.0:${PORT}`);
-      console.log(`🌐 Access via LAN: http://192.168.8.113:${PORT}`);
     });
   })
   .catch((err) => {

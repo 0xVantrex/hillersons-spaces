@@ -32,7 +32,7 @@ router.post("/", verifyToken, async (req, res) => {
   }
 });
 
-// Guest cart endpoint - SAVE
+// Guest cart endpoint
 router.post("/guest", async (req, res) => {
   try {
     console.log("Guest cart save: ", req.body);
@@ -43,11 +43,11 @@ router.post("/guest", async (req, res) => {
     }
 
     let guestCart = await Cart.findOneAndUpdate(
-      { sessionId }, // Use sessionId for guests
+      { sessionId }, 
       {
         items,
         sessionId,
-        userId: null, // Explicitly set userId to null for guests
+        userId: null, 
       },
       { new: true, upsert: true }
     );
@@ -87,5 +87,4 @@ router.delete("/", verifyToken, async (req, res) => {
   }
 });
 
-// Change this line from ES modules to CommonJS:
 module.exports = router;

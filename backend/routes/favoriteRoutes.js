@@ -15,7 +15,7 @@ router.patch("/:id/favorite", async (req, res) => {
     await plan.save();
 
     res.json({
-      message: "Plan favorited",
+      message: "Plan favorites",
       favorites_count: plan.favorites_count,
     });
   } catch (err) {

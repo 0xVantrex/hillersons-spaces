@@ -1,3 +1,6 @@
-fix productcard
+fix product 
+card responsiveness in tablet mode i pad
 watch showcase to be linked to an actual video 
 the categories section to pick all subcategories
+fix dashboard to relay real data
+add BNB listing.

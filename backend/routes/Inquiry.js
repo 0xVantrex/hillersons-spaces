@@ -12,7 +12,6 @@ router.post("/", async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 });
-
 // Get all inquiries
 router.get("/", async (req, res) => {
   try {
@@ -22,7 +21,6 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 // Update inquiry by ID
 router.patch("/:id", async (req, res) => {
   try {
@@ -37,5 +35,4 @@ router.patch("/:id", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 module.exports = router;

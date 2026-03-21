@@ -56,7 +56,7 @@ router.post("/google", async (req, res) => {
   }
 });
 
-// 📌 Email/Password Signup
+// Email/Password Signup
 router.post("/signup", async (req, res) => {
   try {
     const { email, password, name } = req.body;
