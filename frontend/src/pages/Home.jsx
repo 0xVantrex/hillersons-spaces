@@ -331,7 +331,7 @@ const HomePage = () => {
                 <span className="text-xs sm:text-sm font-semibold text-lime-200 tracking-wide">
                   FREE ARCHITECTURAL PLANS
                 </span>
-                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-300" />
+              
               </div>
 
               {/* Main Headline */}
@@ -682,15 +682,6 @@ const HomePage = () => {
                       onQuickView={() => handleQuickView(product)}
                     />
 
-                    {/* Trending indicator */}
-                    <div className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-gradient-to-r from-lime-500 to-emerald-500 text-white p-1.5 sm:p-2 rounded-full shadow-lg animate-pulse">
-                      <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
-                    </div>
-
-                    {/* New badge */}
-                    <div className="absolute top-3 sm:top-4 left-3 sm:left-4 bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                      NEW
-                    </div>
                   </div>
                 </div>
               ))}

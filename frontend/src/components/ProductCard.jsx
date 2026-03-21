@@ -250,7 +250,7 @@ const ProductCard = ({ product, isFavorite, viewMode, onQuickView }) => {
         )}
         {product.newListing && (
           <div className="absolute top-4 right-4 bg-gradient-to-r from-lime-500 to-emerald-500 text-white px-3 py-1.5 rounded-2xl text-xs font-bold shadow-lg z-40 flex items-center">
-            <Zap className="w-3 h-3 mr-1" />
+           
             NEW
           </div>
         )}
