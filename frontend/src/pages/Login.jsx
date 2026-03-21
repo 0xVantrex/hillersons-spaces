@@ -35,7 +35,6 @@ export default function Login() {
     setMounted(true);
   }, []);
 
-  // Email validation
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) return "Please enter a valid email address";
@@ -47,7 +46,6 @@ export default function Login() {
     setForm((f) => ({ ...f, [name]: value.trimStart() }));
     setError("");
 
-    // Real-time validation
     const errors = { ...fieldErrors };
 
     if (name === "email") {
@@ -67,16 +65,33 @@ export default function Login() {
     setFieldErrors(errors);
   };
 
+  // ── Role-based redirect helper ─────────────────────────────────────────────
+  const redirectByRole = (user) => {
+    if (user.role === "admin") {
+      navigate("/admin/dashboard", { replace: true });
+    } else if (
+      ["vendor", "bnbHost", "contractor"].includes(user.role) &&
+      user.vendorStatus === "approved"
+    ) {
+      navigate("/vendor/dashboard", { replace: true });
+    } else if (
+      ["vendor", "bnbHost", "contractor"].includes(user.role) &&
+      user.vendorStatus === "pending"
+    ) {
+      navigate("/vendor/apply", { replace: true });
+    } else {
+      navigate(from, { replace: true });
+    }
+  };
+
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    // Validate all fields
     const errors = {};
     const emailError = validateEmail(form.email);
     if (emailError) errors.email = emailError;
-
     if (form.password.length < 6) {
       errors.password = "Password must be at least 6 characters";
     }
@@ -86,16 +101,12 @@ export default function Login() {
       setLoading(false);
       return;
     }
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email, password: form.password }),
       });
 
       const data = await res.json();
@@ -107,27 +118,19 @@ export default function Login() {
       }
 
       const { token, user } = data;
+      login(user, token);
+      setShowSuccess(true);
 
-      login(user, token,);
       setTimeout(() => {
-        if (user.role === "admin") {
-          setShowSuccess(true);
-          navigate("/admin/dashboard", { replace: true});
-        } else {
-          navigate(from, { replace: true});
-        }
+        redirectByRole(user);
       }, 900);
     } catch (err) {
       console.error("Login error:", err);
-      setError(
-        "Failed to sign in. Please check your credentials and try again."
-      );
+      setError("Failed to sign in. Please check your credentials and try again.");
     } finally {
       setLoading(false);
     }
   };
-
-  if (!mounted) return null;
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
@@ -137,10 +140,9 @@ export default function Login() {
         tokenId: idToken,
       });
 
-      const { token, user } = res.data;
-
-      login(user, token, true);
-      navigate(from, { replace: true});
+      const { token: gToken, user: gUser } = res.data;
+      login(gUser, gToken);
+      redirectByRole(gUser);
     } catch (err) {
       console.error("Google signup error:", err);
       setError("Google signup failed: " + err.message);
@@ -155,7 +157,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-lime-50 flex items-center justify-center p-4 relative overflow-hidden">
-      
       <ForgotPassword />
 
       {/* Background Elements */}
@@ -178,13 +179,12 @@ export default function Login() {
 
         {/* Main Form Card */}
         <div className="bg-white/90 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/30 p-8 space-y-6 transform hover:shadow-3xl transition-all duration-300">
-          {/* Success Message */}
           {showSuccess && (
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-lime-50 border border-green-200 rounded-2xl text-green-700 animate-fadeIn">
               <CheckCircle2 className="w-6 h-6 text-green-600 animate-bounce" />
               <div>
                 <h3 className="font-semibold">Login Successful!</h3>
-                <p className="text-sm">Redirecting to your dashboard...</p>
+                <p className="text-sm">Redirecting you now...</p>
               </div>
             </div>
           )}
@@ -197,7 +197,7 @@ export default function Login() {
           )}
 
           <div className="space-y-6">
-            {/* Email Field */}
+            {/* Email */}
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-700">
                 Email Address
@@ -231,7 +231,7 @@ export default function Login() {
               )}
             </div>
 
-            {/* Password Field */}
+            {/* Password */}
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-700">
                 Password
@@ -256,11 +256,7 @@ export default function Login() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
               {fieldErrors.password && (
@@ -271,9 +267,8 @@ export default function Login() {
               )}
             </div>
 
-            {/* Remember Me & Forgot Password */}
+            {/* Forgot Password */}
             <div className="flex items-center justify-between">
-              
               <button
                 type="button"
                 onClick={handleForgotPassword}
@@ -318,7 +313,7 @@ export default function Login() {
             <div className="flex-1 h-px bg-gradient-to-l from-transparent via-gray-300 to-transparent" />
           </div>
 
-          {/* Google Signup */}
+          {/* Google Login */}
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
             onError={() => {
@@ -337,6 +332,17 @@ export default function Login() {
               Create Account
             </Link>
           </p>
+
+          {/* Vendor apply link */}
+          <p className="text-center text-sm text-gray-500">
+            Want to sell on Hillersons?{" "}
+            <Link
+              to="/vendor/apply"
+              className="text-emerald-600 hover:text-emerald-700 hover:underline font-semibold transition-colors duration-200"
+            >
+              Apply as a Vendor
+            </Link>
+          </p>
         </div>
       </div>
 
@@ -350,51 +356,21 @@ export default function Login() {
 
       <style jsx>{`
         @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-
         @keyframes slideDown {
-          from {
-            opacity: 0;
-            transform: translateY(-5px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(-5px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-
         @keyframes shake {
-          0%,
-          100% {
-            transform: translateX(0);
-          }
-          25% {
-            transform: translateX(-5px);
-          }
-          75% {
-            transform: translateX(5px);
-          }
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
         }
-
-        .animate-fadeIn {
-          animation: fadeIn 0.5s ease-out;
-        }
-
-        .animate-slideDown {
-          animation: slideDown 0.3s ease-out;
-        }
-
-        .animate-shake {
-          animation: shake 0.5s ease-in-out;
-        }
+        .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
+        .animate-slideDown { animation: slideDown 0.3s ease-out; }
+        .animate-shake { animation: shake 0.5s ease-in-out; }
       `}</style>
     </div>
   );

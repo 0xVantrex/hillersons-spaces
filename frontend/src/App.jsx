@@ -1,5 +1,4 @@
-// src/App.js
-import { Routes, Route, Navigate, useLocation  } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 
 import Login from "./pages/Login";
@@ -18,71 +17,50 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import ResetPassword from "./pages/ResetPassword";
 import CustomDesignForm from "./pages/CustomDesignForm";
 import Contact from "./pages/Contact";
+import VendorApply from "./pages/VendorApply";
+import VendorDashboard from "./pages/VendorDashboard";
 
 function App() {
+  const { user, loading, isAdmin, isApprovedVendor } = useAuth();
 
-    const {user, loading } = useAuth();
-
-    const RequireAuth = ({ children }) => {
+  // ── Any logged-in user ─────────────────────────────────────────────────────
+  const RequireAuth = ({ children }) => {
     const location = useLocation();
-
     if (loading) return null;
+    if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+    return children;
+  };
 
-    if (!user) {
-      return <Navigate to="/login" state={{ from: location }} replace />;
-  }
+  // ── Admin only ─────────────────────────────────────────────────────────────
+  const RequireAdmin = ({ children }) => {
+    const location = useLocation();
+    if (loading) return null;
+    if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+    if (!isAdmin) return <Navigate to="/" replace />;
+    return children;
+  };
 
-  return children;
-};
-
+  // ── Approved vendors + admins ──────────────────────────────────────────────
+  const RequireVendor = ({ children }) => {
+    const location = useLocation();
+    if (loading) return null;
+    if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+    if (!isApprovedVendor && !isAdmin) return <Navigate to="/vendor/apply" replace />;
+    return children;
+  };
 
   return (
     <Routes>
+      {/* Public */}
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
-      <Route
-        path="/profile"
-        element={
-          <RequireAuth>
-            <ProfilePage />
-          </RequireAuth>
-        }
-      />
-
-      <Route
-        path="/admin/upload"
-        element={
-          <RequireAuth>
-            <UploadProject />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/admin/dashboard"
-        element={
-          <RequireAuth>
-            <AdminDashboard />
-          </RequireAuth>
-        }
-      />
-    
-
-      {/* Regular Pages */}
       <Route path="/productDetail" element={<ProductDetail />} />
       <Route path="/product/:id" element={<ProductDetail />} />
       <Route path="/quick-buy/:id" element={<CartPage />} />
-      <Route
-        path="/categories/:subCategoryGroup"
-        element={<CategoryListing />}
-      />
-      <Route
-        path="/categories/:subCategoryGroup/:subCategory"
-        element={<CategoryListing />}
-      />
+      <Route path="/categories/:subCategoryGroup" element={<CategoryListing />} />
+      <Route path="/categories/:subCategoryGroup/:subCategory" element={<CategoryListing />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
-
-      {/* Protected Routes */}
       <Route path="/home" element={<HomePage />} />
       <Route path="/allproducts" element={<AllProducts />} />
       <Route path="/categories" element={<Categories />} />
@@ -91,9 +69,20 @@ function App() {
       <Route path="/aboutus" element={<AboutUs />} />
       <Route path="/custom-design" element={<CustomDesignForm />} />
       <Route path="/contact" element={<Contact />} />
-
-      {/* Redirects */}
       <Route path="/reset-password/:token" element={<ResetPassword />} />
+
+      {/* Any logged-in user */}
+      <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+
+      {/* Vendor apply — any logged-in user can apply */}
+      <Route path="/vendor/apply" element={<RequireAuth><VendorApply /></RequireAuth>} />
+
+      {/* Approved vendor only */}
+      <Route path="/vendor/dashboard" element={<RequireVendor><VendorDashboard /></RequireVendor>} />
+
+      {/* Admin only */}
+      <Route path="/admin/dashboard" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
+      <Route path="/admin/upload" element={<RequireAdmin><UploadProject /></RequireAdmin>} />
     </Routes>
   );
 }

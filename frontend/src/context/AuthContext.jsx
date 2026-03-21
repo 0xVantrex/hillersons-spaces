@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }) => {
     }
     setLoading(false);
   }, []);
+
   const login = (userData, authToken) => {
     setUser(userData);
     setToken(authToken);
@@ -31,8 +32,31 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("authToken");
   };
 
+  // ── Derived role helpers ───────────────────────────────────────────────────
+  const isAdmin = user?.role === "admin";
+  const isVendor = ["vendor", "bnbHost", "contractor"].includes(user?.role);
+  const isApprovedVendor = isVendor && user?.vendorStatus === "approved";
+  const isPendingVendor = isVendor && user?.vendorStatus === "pending";
+  const role = user?.role || "user";
+  const vendorStatus = user?.vendorStatus || "none";
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        login,
+        logout,
+        loading,
+        // Role helpers — use these in components instead of checking user.role directly
+        isAdmin,
+        isVendor,
+        isApprovedVendor,
+        isPendingVendor,
+        role,
+        vendorStatus,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
