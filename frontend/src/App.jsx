@@ -62,11 +62,11 @@ function App() {
       <Route path="/categories/:subCategoryGroup/:subCategory" element={<CategoryListing />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/home" element={<HomePage />} />
-      <Route path="/allproducts" element={<AllProducts />} />
+      <Route path="/AllProducts" element={<AllProducts />} />
       <Route path="/categories" element={<Categories />} />
-      <Route path="/categorylisting" element={<CategoryListing />} />
+      <Route path="/CategoryListing" element={<CategoryListing />} />
       <Route path="/cart" element={<CartPage />} />
-      <Route path="/aboutus" element={<AboutUs />} />
+      <Route path="/AboutUs" element={<AboutUs />} />
       <Route path="/custom-design" element={<CustomDesignForm />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
@@ -78,7 +78,7 @@ function App() {
       <Route path="/vendor/apply" element={<RequireAuth><VendorApply /></RequireAuth>} />
 
       {/* Approved vendor only */}
-      <Route path="/vendor/dashboard" element={<RequireVendor><VendorDashboard /></RequireVendor>} />
+      <Route path="/vendor/dashboard" element={<RequireVendor><vendorDashboard /></RequireVendor>} />
 
       {/* Admin only */}
       <Route path="/admin/dashboard" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
