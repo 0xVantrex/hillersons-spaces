@@ -46,6 +46,7 @@ app.use("/api/categories", require("./routes/category"));
 app.use("/api/projects", require("./routes/projects"));
 app.use("/api/listings", require("./routes/listings"));
 app.use("/api/vendor", require("./routes/vendor"));
+app.use("/api/bnb", require("./routes/bnb"));
 
 // Test route
 app.get("/", (req, res) => {
