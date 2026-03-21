@@ -1,391 +1,245 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line,
 } from "recharts";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { API_BASE_URL } from "../lib/api";
 
-const AdminDashboard = ({ token, user }) => {
+const COLORS = ["#10B981", "#84CC16", "#F59E0B", "#EF4444", "#8B5CF6"];
+
+const AdminDashboard = () => {
+  const { token, user, logout } = useAuth(); // ✅ from AuthContext, not props
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Data states
-  const [projects, setProjects] = useState([]);
+  const [plans, setPlans] = useState([]);
   const [inquiries, setInquiries] = useState([]);
-  const [customDesignRequests, setCustomDesignRequests] = useState([]);
+  const [customRequests, setCustomRequests] = useState([]);
   const [analytics, setAnalytics] = useState({
-    totalProjects: 0,
+    totalPlans: 0,
     totalInquiries: 0,
     totalCustomRequests: 0,
-    totalFavorites: 0,
-    totalViews: 0,
+    totalLikes: 0,
     monthlyUploads: [],
     categoryBreakdown: [],
+    customRequestsBreakdown: [],
     recentActivity: [],
     engagementStats: [],
-    customRequestsBreakdown: [],
   });
 
-  // Fetch all data
-  const fetchAllData = useCallback(async () => {
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return "Unknown";
+    const diff = Date.now() - new Date(dateString).getTime();
+    const hours = Math.floor(diff / 36e5);
+    const days = Math.floor(diff / 864e5);
+    if (hours < 1) return "Just now";
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
+
+  const computeCategoryBreakdown = (plans) => {
+    const counts = {};
+    plans.forEach((p) => {
+      const cat = p.subCategoryGroup || p.subCategory || "Uncategorized";
+      counts[cat] = (counts[cat] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  };
+
+  const computeCustomBreakdown = (requests) => {
+    const counts = {};
+    requests.forEach((r) => {
+      const type = r.projectType || "Other";
+      counts[type] = (counts[type] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  };
+
+  const generateMonthlyUploads = (plans) => {
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const counts = Object.fromEntries(months.map((m) => [m, 0]));
+    plans.forEach((p) => {
+      if (p.createdAt) {
+        const m = new Date(p.createdAt).toLocaleString("default", { month: "short" });
+        if (counts[m] !== undefined) counts[m]++;
+      }
+    });
+    return months.map((month) => ({ month, uploads: counts[month] }));
+  };
+
+  const generateRecentActivity = (plans, inquiries, requests) => {
+    const activities = [];
+    [...plans]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 2)
+      .forEach((p) => activities.push({
+        icon: "",
+        message: `New plan uploaded: ${p.title}`,
+        time: formatTimeAgo(p.createdAt),
+      }));
+    [...inquiries]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 2)
+      .forEach((i) => activities.push({
+        icon: "",
+        message: `New inquiry from ${i.name}`,
+        time: formatTimeAgo(i.createdAt),
+      }));
+    [...requests]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 2)
+      .forEach((r) => activities.push({
+        icon: "",
+        message: `Custom request from ${r.name} — ${r.projectType || "unspecified"}`,
+        time: formatTimeAgo(r.createdAt),
+      }));
+    return activities.sort((a, b) => a.time.localeCompare(b.time)).slice(0, 6);
+  };
+
+  // ── Fetch ──────────────────────────────────────────────────────────────────
+
+  const fetchAll = useCallback(async () => {
+    // Wait for AuthContext to rehydrate token from localStorage
+    const activeToken = token || localStorage.getItem("authToken");
+    if (!activeToken) return;
     setLoading(true);
+    const headers = {
+        Authorization: `Bearer ${activeToken}`,
+        "Content-Type": "application/json",
+      };
     try {
-      // Fetch projects
-      const resProjects = await fetch(`${API_BASE_URL}api/plans`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const projectData = await resProjects.json();
-      setProjects(projectData);
-
-      // Fetch inquiries
-      const resInquiries = await fetch(`${API_BASE_URL}api/inquiries`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const inquiryData = await resInquiries.json();
-      setInquiries(inquiryData);
-
-      // Fetch custom design requests
-      const resCustomRequests = await fetch(
-        `${API_BASE_URL}api/custom-requests/custom-design`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
+      // Fetch independently so one 404 doesn't kill the rest
+      const safeFetch = async (url) => {
+        try {
+          const res = await fetch(url, { headers });
+          if (!res.ok) { console.warn(`${url} returned ${res.status}`); return []; }
+          const data = await res.json();
+          return Array.isArray(data) ? data : [];
+        } catch (e) {
+          console.warn(`Failed to fetch ${url}:`, e.message);
+          return [];
         }
-      );
-      const customRequestData = await resCustomRequests.json();
-      setCustomDesignRequests(customRequestData);
+      };
 
-      // Compute analytics
+      const [safePlans, safeInquiries, safeRequests] = await Promise.all([
+        safeFetch(`${API_BASE_URL}/api/plans`),
+        safeFetch(`${API_BASE_URL}/api/inquiries`),
+        safeFetch(`${API_BASE_URL}/api/custom-requests/custom-design`),
+      ]);
+
+      setPlans(safePlans);
+      setInquiries(safeInquiries);
+      setCustomRequests(safeRequests);
+
       setAnalytics({
-        totalProjects: projectData.length,
-        totalInquiries: inquiryData.length,
-        totalCustomRequests: customRequestData.length,
-        totalFavorites: projectData.reduce(
-          (sum, project) => sum + (project.favorites_count || 0),
-          0
-        ),
-        totalViews: projectData.reduce(
-          (sum, project) => sum + (project.views_count || 0),
-          0
-        ),
-        categoryBreakdown: computeCategoryBreakdown(projectData),
-        customRequestsBreakdown:
-          computeCustomRequestsBreakdown(customRequestData),
-        monthlyUploads: generateMonthlyUploads(projectData),
-        recentActivity: generateRecentActivity(
-          projectData,
-          inquiryData,
-          customRequestData
-        ),
-        engagementStats: generateEngagementStats(projectData),
+        totalPlans: safePlans.length,
+        totalInquiries: safeInquiries.length,
+        totalCustomRequests: safeRequests.length,
+        totalLikes: safePlans.reduce((sum, p) => sum + (p.likes_count || 0), 0),
+        categoryBreakdown: computeCategoryBreakdown(safePlans),
+        customRequestsBreakdown: computeCustomBreakdown(safeRequests),
+        monthlyUploads: generateMonthlyUploads(safePlans),
+        recentActivity: generateRecentActivity(safePlans, safeInquiries, safeRequests),
+        engagementStats: [...safePlans]
+          .sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0))
+          .slice(0, 10)
+          .map((p) => ({
+            name: (p.title?.substring(0, 20) || "Unnamed") + "...",
+            likes: p.likes_count || 0,
+          })),
       });
-    } catch (error) {
-      console.error("Error fetching data:", error);
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
     } finally {
       setLoading(false);
     }
   }, [token]);
 
-  useEffect(() => {
-    fetchAllData();
-  }, [fetchAllData]);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // Helper functions
-  const computeCategoryBreakdown = (projects) => {
-    const counts = {};
-    projects.forEach((p) => {
-      const category = p.category || "Uncategorized";
-      counts[category] = (counts[category] || 0) + 1;
+  // ── Actions ────────────────────────────────────────────────────────────────
+
+  const getHeaders = () => ({
+    Authorization: `Bearer ${token || localStorage.getItem("authToken")}`,
+    "Content-Type": "application/json",
+  });
+
+  const deletePlan = async (id) => {
+    if (!window.confirm("Delete this plan?")) return;
+    await fetch(`${API_BASE_URL}/api/plans/${id}`, { method: "DELETE", headers: getHeaders() });
+    fetchAll();
+  };
+
+  const deleteInquiry = async (id) => {
+    if (!window.confirm("Delete this inquiry?")) return;
+    await fetch(`${API_BASE_URL}/api/inquiries/${id}`, { method: "DELETE", headers: getHeaders() });
+    fetchAll();
+  };
+
+  const deleteRequest = async (id) => {
+    if (!window.confirm("Delete this request?")) return;
+    await fetch(`${API_BASE_URL}/api/custom-requests/custom-design/${id}`, { method: "DELETE", headers: getHeaders() });
+    fetchAll();
+  };
+
+  const updateInquiryStatus = async (id, status) => {
+    await fetch(`${API_BASE_URL}/api/inquiries/${id}`, {
+      method: "PATCH", headers: getHeaders(), body: JSON.stringify({ status }),
     });
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+    fetchAll();
   };
 
-  const computeCustomRequestsBreakdown = (requests) => {
-    const counts = {};
-    requests.forEach((r) => {
-      const projectType = r.projectType || "Other";
-      counts[projectType] = (counts[projectType] || 0) + 1;
+  const updateRequestStatus = async (id, status) => {
+    await fetch(`${API_BASE_URL}/api/custom-requests/custom-design/${id}`, {
+      method: "PATCH", headers: getHeaders(), body: JSON.stringify({ status }),
     });
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+    fetchAll();
   };
 
-  const generateMonthlyUploads = (projects) => {
-    const monthCounts = {};
-    const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
+  const handleLogout = () => { logout(); navigate("/login"); };
 
-    // Initialize all months with 0
-    months.forEach((month) => {
-      monthCounts[month] = 0;
-    });
-
-    // Count projects by creation month
-    projects.forEach((project) => {
-      if (project.created_at) {
-        const month = new Date(project.created_at).toLocaleString("default", {
-          month: "short",
-        });
-        if (monthCounts.hasOwnProperty(month)) {
-          monthCounts[month]++;
-        }
-      }
-    });
-
-    return months.map((month) => ({
-      month,
-      uploads: monthCounts[month],
-    }));
-  };
-
-  const generateEngagementStats = (projects) => {
-    return projects
-      .map((project) => ({
-        name: project.title?.substring(0, 20) + "..." || "Unnamed Project",
-        views: project.views_count || 0,
-        favorites: project.favorites_count || 0,
-        inquiries: project.inquiries_count || 0,
-      }))
-      .sort((a, b) => b.views - a.views)
-      .slice(0, 10);
-  };
-
-  const generateRecentActivity = (projects, inquiries, customRequests) => {
-    const activities = [];
-
-    // Recent project uploads
-    const recentProjects = projects
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .slice(0, 2);
-
-    recentProjects.forEach((project) => {
-      activities.push({
-        type: "project",
-        message: `New project uploaded: ${project.title}`,
-        time: formatTimeAgo(project.created_at),
-        icon: "🏗️",
-      });
-    });
-
-    // Recent inquiries
-    const recentInquiries = inquiries
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .slice(0, 2);
-
-    recentInquiries.forEach((inquiry) => {
-      activities.push({
-        type: "inquiry",
-        message: `New inquiry for: ${inquiry.project_title || inquiry.subject}`,
-        time: formatTimeAgo(inquiry.created_at),
-        icon: "💬",
-      });
-    });
-
-    // Recent custom design requests
-    const recentCustomRequests = customRequests
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .slice(0, 2);
-
-    recentCustomRequests.forEach((request) => {
-      activities.push({
-        type: "custom",
-        message: `New custom design request from ${request.name} for ${request.projectType}`,
-        time: formatTimeAgo(request.created_at),
-        icon: "✨",
-      });
-    });
-
-    return activities.slice(0, 6);
-  };
-
-  const formatTimeAgo = (dateString) => {
-    if (!dateString) return "Unknown";
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffHours < 24) {
-      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-    }
-    return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-  };
-
-  const handleDeleteProject = async (id) => {
-    if (window.confirm("Are you sure you want to delete this project?")) {
-      try {
-        await fetch(`${API_BASE_URL}api/plans/${id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        fetchAllData();
-      } catch (err) {
-        console.error("Failed to delete project:", err);
-      }
-    }
-  };
-
-  const handleDeleteInquiry = async (id) => {
-    if (window.confirm("Are you sure you want to delete this inquiry?")) {
-      try {
-        await fetch(`${API_BASE_URL}api/inquiries/${id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        fetchAllData();
-      } catch (err) {
-        console.error("Failed to delete inquiry:", err);
-      }
-    }
-  };
-
-  const handleDeleteCustomRequest = async (id) => {
-    if (
-      window.confirm(
-        "Are you sure you want to delete this custom design request?"
-      )
-    ) {
-      try {
-        await fetch(`${API_BASE_URL}api/custom-requests/custom-design/${id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        fetchAllData();
-      } catch (err) {
-        console.error("Failed to delete custom request:", err);
-      }
-    }
-  };
-
-  const handleUpdateProjectStatus = async (id, status) => {
-    try {
-      await fetch(`${API_BASE_URL}api/plans/${id}`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status }),
-      });
-      fetchAllData();
-    } catch (err) {
-      console.error("Failed to update project status:", err);
-    }
-  };
-
-  const handleUpdateInquiryStatus = async (id, status) => {
-    try {
-      await fetch(`${API_BASE_URL}api/inquiries/${id}`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status }),
-      });
-      fetchAllData();
-    } catch (err) {
-      console.error("Failed to update inquiry status:", err);
-    }
-  };
-
-  const handleUpdateCustomRequestStatus = async (id, status) => {
-    try {
-      await fetch(`${API_BASE_URL}api/custom-requests/custom-design/${id}`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status }),
-      });
-      fetchAllData();
-    } catch (err) {
-      console.error("Failed to update custom request status:", err);
-    }
-  };
+  // ── UI ─────────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading Admin Dashboard...</p>
+          <p className="mt-4 text-gray-600">Loading Dashboard...</p>
         </div>
       </div>
     );
   }
 
   const tabs = [
-    { id: "overview", label: "Overview", icon: "📊" },
-    { id: "projects", label: "Projects", icon: "🏗️" },
-    { id: "inquiries", label: "Inquiries", icon: "💬" },
-    { id: "custom-designs", label: "Custom Designs", icon: "✨" },
-    { id: "analytics", label: "Analytics", icon: "📈" },
-    { id: "settings", label: "Settings", icon: "⚙️" },
+    { id: "overview", label: "Overview", icon: "" },
+    { id: "plans", label: "Plans", icon: "" },
+    { id: "inquiries", label: "Inquiries", icon: "" },
+    { id: "custom-designs", label: "Custom Designs", icon: "" },
+    { id: "analytics", label: "Analytics", icon: "" },
   ];
-
-  const StatCard = ({ title, value, icon, trend }) => (
-    <div className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-gray-500 text-sm font-medium">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
-          {trend && (
-            <p
-              className={`text-sm mt-2 ${
-                trend > 0 ? "text-emerald-600" : "text-red-600"
-              }`}
-            >
-              {trend > 0 ? "↗" : "↘"} {Math.abs(trend)}% from last month
-            </p>
-          )}
-        </div>
-        <div className="text-4xl">{icon}</div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <h1 className="text-3xl font-bold text-gray-900">
-                🏛️ Admin Dashboard
-              </h1>
-              <span className="ml-4 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-medium">
-                Admin
-              </span>
+          <div className="flex justify-between items-center py-5">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-medium">Admin</span>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-500">
-                Welcome, {user?.email}
-              </div>
-              <button className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors">
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-500">{user?.email}</span>
+              <button
+                onClick={handleLogout}
+                className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+              >
                 Sign Out
               </button>
             </div>
@@ -394,994 +248,437 @@ const AdminDashboard = ({ token, user }) => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Navigation Tabs */}
-        <div className="mb-8">
-          <nav className="flex space-x-1 bg-white rounded-lg p-1 shadow-sm">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                }`}
-              >
-                <span className="mr-2">{tab.icon}</span>
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
+        {/* Tabs */}
+        <nav className="flex space-x-1 bg-white rounded-lg p-1 shadow-sm mb-8 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                activeTab === tab.id
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              }`}
+            >
+              <span className="mr-2">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </nav>
 
-        {/* Overview Tab */}
+        {/* ── OVERVIEW ── */}
         {activeTab === "overview" && (
           <div className="space-y-8">
-            {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-              <StatCard
-                title="Total Projects"
-                value={analytics.totalProjects}
-  
-                trend={12}
-              />
-              <StatCard
-                title="Total Inquiries"
-                value={analytics.totalInquiries}
-              
-                trend={8}
-              />
-              <StatCard
-                title="Custom Designs"
-                value={analytics.totalCustomRequests}
-             
-                trend={23}
-              />
-              <StatCard
-                title="Total Favorites"
-                value={analytics.totalFavorites}
-             
-                trend={15}
-              />
-              <StatCard
-                title="Total Views"
-                value={analytics.totalViews}
-             
-                trend={25}
-              />
+            {/* Stat cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { title: "Total Plans", value: analytics.totalPlans, icon: "" },
+                { title: "Inquiries", value: analytics.totalInquiries, icon: "" },
+                { title: "Custom Requests", value: analytics.totalCustomRequests, icon: "" },
+                { title: "Total Likes", value: analytics.totalLikes, icon: "Likes" },
+              ].map((s) => (
+                <div key={s.title} className="bg-white rounded-xl shadow p-6 flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 text-sm">{s.title}</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{s.value}</p>
+                  </div>
+                  <span className="text-4xl">{s.icon}</span>
+                </div>
+              ))}
             </div>
 
-            {/* Charts Row */}
+            {/* Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Monthly Uploads Chart */}
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Monthly Project Uploads
-                </h3>
-                <ResponsiveContainer width="100%" height={300}>
+              <div className="bg-white rounded-xl shadow p-6">
+                <h3 className="font-semibold text-gray-800 mb-4">Monthly Uploads</h3>
+                <ResponsiveContainer width="100%" height={260}>
                   <LineChart data={analytics.monthlyUploads}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                     <YAxis />
-                    <Tooltip formatter={(value) => [value, "Uploads"]} />
-                    <Line
-                      type="monotone"
-                      dataKey="uploads"
-                      stroke="#10B981"
-                      strokeWidth={3}
-                    />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="uploads" stroke="#10B981" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
 
-              {/* Category Breakdown */}
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Project Categories
-                </h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={analytics.categoryBreakdown}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) =>
-                        `${name} ${(percent * 100).toFixed(0)}%`
-                      }
-                    >
-                      {analytics.categoryBreakdown.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={
-                            [
-                              "#10B981",
-                              "#84CC16",
-                              "#F59E0B",
-                              "#EF4444",
-                              "#8B5CF6",
-                            ][index % 5]
-                          }
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+              <div className="bg-white rounded-xl shadow p-6">
+                <h3 className="font-semibold text-gray-800 mb-4">Plan Categories</h3>
+                {analytics.categoryBreakdown.length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center mt-16">No category data yet</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <PieChart>
+                      <Pie data={analytics.categoryBreakdown} cx="50%" cy="50%" outerRadius={90} dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {analytics.categoryBreakdown.map((_, i) => (
+                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
               </div>
 
-              {/* Custom Requests Breakdown */}
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Custom Request Types
-                </h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={analytics.customRequestsBreakdown}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [value, "Requests"]} />
-                    <Bar dataKey="value" fill="#84CC16" />
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="bg-white rounded-xl shadow p-6">
+                <h3 className="font-semibold text-gray-800 mb-4">Custom Request Types</h3>
+                {analytics.customRequestsBreakdown.length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center mt-16">No requests yet</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={analytics.customRequestsBreakdown}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#84CC16" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
 
             {/* Recent Activity */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Recent Activity
-              </h3>
-              <div className="space-y-4">
-                {analytics.recentActivity.map((activity, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center p-3 bg-gray-50 rounded-lg"
-                  >
-                    <span className="text-2xl mr-3">{activity.icon}</span>
-                    <div className="flex-1">
-                      <p className="text-gray-900">{activity.message}</p>
-                      <p className="text-gray-500 text-sm">{activity.time}</p>
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="font-semibold text-gray-800 mb-4">Recent Activity</h3>
+              {analytics.recentActivity.length === 0 ? (
+                <p className="text-gray-400 text-sm">No recent activity</p>
+              ) : (
+                <div className="space-y-3">
+                  {analytics.recentActivity.map((a, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <span className="text-2xl">{a.icon}</span>
+                      <div className="flex-1">
+                        <p className="text-gray-800 text-sm">{a.message}</p>
+                        <p className="text-gray-400 text-xs">{a.time}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Projects Tab */}
-        {activeTab === "projects" && (
-          <div className="bg-white rounded-lg shadow-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Project Management
-                </h2>
-                <button
-                  onClick={() => (window.location.href = "/admin/upload")}
-                  className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
-                >
-                  + Upload New Project
-                </button>
-              </div>
+        {/* ── PLANS ── */}
+        {activeTab === "plans" && (
+          <div className="bg-white rounded-xl shadow">
+            <div className="px-6 py-4 border-b flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-900">Plans ({plans.length})</h2>
+              <button
+                onClick={() => navigate("/admin/upload")}
+                className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 text-sm"
+              >
+                + Upload Plan
+              </button>
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Project
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Views
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Favorites
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {projects.map((project) => (
-                    <tr key={project.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {project.title}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {project.description?.substring(0, 50)}...
+            {plans.length === 0 ? (
+              <p className="p-6 text-gray-400">No plans uploaded yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {["Title", "Category", "Price", "Rooms", "Likes", "Date", "Actions"].map((h) => (
+                        <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {plans.map((plan) => (
+                      <tr key={plan._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            {(plan.finalImageURLs?.[0] || plan.planImageURLs?.[0]) && (
+                              <img
+                                src={plan.finalImageURLs?.[0] || plan.planImageURLs?.[0]}
+                                alt={plan.title}
+                                className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                              />
+                            )}
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{plan.title}</p>
+                              <p className="text-xs text-gray-400 line-clamp-1">{plan.description?.substring(0, 50)}</p>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {project.category}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {project.views_count || 0}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {project.favorites_count || 0}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <select
-                          value={project.status || "draft"}
-                          onChange={(e) =>
-                            handleUpdateProjectStatus(
-                              project.id,
-                              e.target.value
-                            )
-                          }
-                          className={`px-2 py-1 text-xs font-medium rounded-full border ${
-                            project.status === "published"
-                              ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                              : project.status === "draft"
-                              ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                              : "bg-gray-100 text-gray-800 border-gray-300"
-                          }`}
-                        >
-                          <option value="draft">Draft</option>
-                          <option value="published">Published</option>
-                          <option value="archived">Archived</option>
-                        </select>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="text-emerald-600 hover:text-emerald-900 mr-3">
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProject(project.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{plan.subCategoryGroup || plan.subCategory || "—"}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{plan.price ? `KES ${Number(plan.price).toLocaleString()}` : "—"}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{plan.rooms || "—"}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{plan.likes_count || 0}</td>
+                        <td className="px-6 py-4 text-sm text-gray-400">{new Date(plan.createdAt).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 text-sm">
+                          <button
+                            onClick={() => deletePlan(plan._id)}
+                            className="text-red-600 hover:text-red-800 font-medium"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Inquiries Tab */}
+        {/* ── INQUIRIES ── */}
         {activeTab === "inquiries" && (
-          <div className="bg-white rounded-lg shadow-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Client Inquiries
-              </h2>
+          <div className="bg-white rounded-xl shadow">
+            <div className="px-6 py-4 border-b">
+              <h2 className="text-lg font-semibold text-gray-900">Inquiries ({inquiries.length})</h2>
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Client
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Project
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {inquiries.map((inquiry) => (
-                    <tr key={inquiry.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {inquiry.client_name || inquiry.name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {inquiry.email}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {inquiry.project_title || inquiry.subject}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(inquiry.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <select
-                          value={inquiry.status || "new"}
-                          onChange={(e) =>
-                            handleUpdateInquiryStatus(
-                              inquiry.id,
-                              e.target.value
-                            )
-                          }
-                          className={`px-2 py-1 text-xs font-medium rounded-full border ${
-                            inquiry.status === "contacted"
-                              ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                              : inquiry.status === "in-progress"
-                              ? "bg-blue-100 text-blue-800 border-blue-300"
-                              : inquiry.status === "closed"
-                              ? "bg-gray-100 text-gray-800 border-gray-300"
-                              : "bg-yellow-100 text-yellow-800 border-yellow-300"
-                          }`}
-                        >
-                          <option value="new">New</option>
-                          <option value="contacted">Contacted</option>
-                          <option value="in-progress">In Progress</option>
-                          <option value="closed">Closed</option>
-                        </select>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => {
-                            const modal = document.getElementById(
-                              `inquiry-modal-${inquiry.id}`
-                            );
-                            modal.style.display = "block";
-                          }}
-                          className="text-emerald-600 hover:text-emerald-900 mr-3"
-                        >
-                          View Details
-                        </button>
-                        <button
-                          onClick={() => handleDeleteInquiry(inquiry.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-
-                        {/* Inquiry Modal */}
-                        <div
-                          id={`inquiry-modal-${inquiry.id}`}
-                          className="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50"
-                          onClick={(e) => {
-                            if (e.target.id === `inquiry-modal-${inquiry.id}`) {
-                              e.target.style.display = "none";
-                            }
-                          }}
-                        >
-                          <div className="flex items-center justify-center min-h-screen p-4">
-                            <div className="bg-white rounded-lg max-w-2xl w-full max-h-96 overflow-y-auto">
-                              <div className="bg-gradient-to-r from-emerald-600 to-lime-500 p-6 text-white">
-                                <div className="flex justify-between items-center">
-                                  <h3 className="text-xl font-bold">
-                                    Inquiry Details
-                                  </h3>
-                                  <button
-                                    onClick={() => {
-                                      document.getElementById(
-                                        `inquiry-modal-${inquiry.id}`
-                                      ).style.display = "none";
-                                    }}
-                                    className="text-white hover:text-gray-200"
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
-                                <p className="text-emerald-100">
-                                  ID: #{inquiry.id}
-                                </p>
-                              </div>
-
-                              <div className="p-6 space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <h4 className="font-semibold text-gray-800">
-                                      Client Information
-                                    </h4>
-                                    <p>
-                                      <strong>Name:</strong>{" "}
-                                      {inquiry.client_name || inquiry.name}
-                                    </p>
-                                    <p>
-                                      <strong>Email:</strong> {inquiry.email}
-                                    </p>
-                                    {inquiry.phone && (
-                                      <p>
-                                        <strong>Phone:</strong> {inquiry.phone}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <h4 className="font-semibold text-gray-800">
-                                      Inquiry Details
-                                    </h4>
-                                    <p>
-                                      <strong>Project:</strong>{" "}
-                                      {inquiry.project_title || inquiry.subject}
-                                    </p>
-                                    <p>
-                                      <strong>Date:</strong>{" "}
-                                      {new Date(
-                                        inquiry.created_at
-                                      ).toLocaleString()}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                {inquiry.message && (
-                                  <div>
-                                    <h4 className="font-semibold text-gray-800">
-                                      Message
-                                    </h4>
-                                    <div className="bg-gray-50 p-4 rounded-lg">
-                                      <p className="text-gray-700">
-                                        {inquiry.message}
-                                      </p>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
+            {inquiries.length === 0 ? (
+              <p className="p-6 text-gray-400">No inquiries yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {["Client", "Project Type", "Budget", "Date", "Status", "Actions"].map((h) => (
+                        <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {inquiries.map((inq) => (
+                      <tr key={inq._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-medium text-gray-900">{inq.name}</p>
+                          <p className="text-xs text-gray-400">{inq.email}</p>
+                          {inq.phone && <p className="text-xs text-gray-400">{inq.phone}</p>}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{inq.projectType || "—"}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{inq.budget || "—"}</td>
+                        <td className="px-6 py-4 text-sm text-gray-400">{new Date(inq.createdAt).toLocaleDateString()}</td>
+                        <td className="px-6 py-4">
+                          <select
+                            value={inq.status || "new"}
+                            onChange={(e) => updateInquiryStatus(inq._id, e.target.value)}
+                            className={`px-2 py-1 text-xs font-medium rounded-full border ${
+                              inq.status === "resolved" ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                              : inq.status === "in-progress" ? "bg-blue-100 text-blue-800 border-blue-300"
+                              : "bg-yellow-100 text-yellow-800 border-yellow-300"
+                            }`}
+                          >
+                            <option value="new">New</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                          </select>
+                        </td>
+                        <td className="px-6 py-4">
+                          <details className="relative">
+                            <summary className="text-emerald-600 hover:text-emerald-800 text-sm cursor-pointer font-medium">
+                              View
+                            </summary>
+                            <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border z-50 p-4 text-sm">
+                              <p className="font-semibold mb-2 text-gray-800">Message</p>
+                              <p className="text-gray-600 whitespace-pre-wrap">{inq.description || "No message"}</p>
+                              <button
+                                onClick={() => deleteInquiry(inq._id)}
+                                className="mt-3 text-red-600 hover:text-red-800 text-xs font-medium"
+                              >
+                                Delete Inquiry
+                              </button>
+                            </div>
+                          </details>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Custom Designs Tab */}
+        {/* ── CUSTOM DESIGNS ── */}
         {activeTab === "custom-designs" && (
-          <div className="bg-white rounded-lg shadow-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Custom Design Requests
-              </h2>
+          <div className="bg-white rounded-xl shadow">
+            <div className="px-6 py-4 border-b">
+              <h2 className="text-lg font-semibold text-gray-900">Custom Design Requests ({customRequests.length})</h2>
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Client
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Project Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Budget
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {customDesignRequests.map((request) => (
-                    <tr
-                      key={request._id || request.id}
-                      className="hover:bg-gray-50"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {request.name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {request.email}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {request.projectType
-                          ?.replace("-", " ")
-                          .replace(/\b\w/g, (l) => l.toUpperCase())}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {request.budget
-                          ?.replace("-", " - ")
-                          .replace(/\b\w/g, (l) => l.toUpperCase()) ||
-                          "Not specified"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(
-                          request.created_at || request.createdAt
-                        ).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <select
-                          value={request.status || "new"}
-                          onChange={(e) =>
-                            handleUpdateCustomRequestStatus(
-                              request._id || request.id,
-                              e.target.value
-                            )
-                          }
-                          className={`px-2 py-1 text-xs font-medium rounded-full border ${
-                            request.status === "contacted"
-                              ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                              : request.status === "in-progress"
-                              ? "bg-blue-100 text-blue-800 border-blue-300"
-                              : request.status === "completed"
-                              ? "bg-green-100 text-green-800 border-green-300"
+            {customRequests.length === 0 ? (
+              <p className="p-6 text-gray-400">No custom design requests yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {["Client", "Project Type", "Rooms", "Budget", "Date", "Status", "Actions"].map((h) => (
+                        <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {customRequests.map((req) => (
+                      <tr key={req._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-medium text-gray-900">{req.name}</p>
+                          <p className="text-xs text-gray-400">{req.email}</p>
+                          {req.phone && <p className="text-xs text-gray-400">{req.phone}</p>}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 capitalize">{req.projectType?.replace(/-/g, " ") || "—"}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{req.rooms || "—"}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{req.budget?.replace(/-/g, " – ") || "—"}</td>
+                        <td className="px-6 py-4 text-sm text-gray-400">{new Date(req.createdAt).toLocaleDateString()}</td>
+                        <td className="px-6 py-4">
+                          <select
+                            value={req.status || "new"}
+                            onChange={(e) => updateRequestStatus(req._id, e.target.value)}
+                            className={`px-2 py-1 text-xs font-medium rounded-full border ${
+                              req.status === "completed" ? "bg-green-100 text-green-800 border-green-300"
+                              : req.status === "in-progress" ? "bg-blue-100 text-blue-800 border-blue-300"
+                              : req.status === "contacted" ? "bg-emerald-100 text-emerald-800 border-emerald-300"
                               : "bg-yellow-100 text-yellow-800 border-yellow-300"
-                          }`}
-                        >
-                          <option value="new">New</option>
-                          <option value="contacted">Contacted</option>
-                          <option value="in-progress">In Progress</option>
-                          <option value="completed">Completed</option>
-                        </select>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => {
-                            const modal = document.getElementById(
-                              `modal-${request._id || request.id}`
-                            );
-                            modal.style.display = "block";
-                          }}
-                          className="text-emerald-600 hover:text-emerald-900 mr-3"
-                        >
-                          View Details
-                        </button>
-                        <button className="text-blue-600 hover:text-blue-900 mr-3">
-                          Contact
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleDeleteCustomRequest(request._id || request.id)
-                          }
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-
-                        {/* Modal for detailed view */}
-                        <div
-                          id={`modal-${request._id || request.id}`}
-                          className="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50"
-                          onClick={(e) => {
-                            if (
-                              e.target.id ===
-                              `modal-${request._id || request.id}`
-                            ) {
-                              e.target.style.display = "none";
-                            }
-                          }}
-                        >
-                          <div className="flex items-center justify-center min-h-screen p-4">
-                            <div className="bg-white rounded-lg max-w-2xl w-full max-h-96 overflow-y-auto">
-                              <div className="bg-gradient-to-r from-emerald-600 to-lime-500 p-6 text-white">
-                                <div className="flex justify-between items-center">
-                                  <h3 className="text-xl font-bold">
-                                    Custom Design Request
-                                  </h3>
-                                  <button
-                                    onClick={() => {
-                                      document.getElementById(
-                                        `modal-${request._id || request.id}`
-                                      ).style.display = "none";
-                                    }}
-                                    className="text-white hover:text-gray-200"
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
-                                <p className="text-emerald-100">
-                                  ID: #
-                                  {(request._id || request.id)
-                                    .toString()
-                                    .slice(-8)}
-                                </p>
-                              </div>
-
-                              <div className="p-6 space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <h4 className="font-semibold text-gray-800">
-                                      Client Information
-                                    </h4>
-                                    <p>
-                                      <strong>Name:</strong> {request.name}
-                                    </p>
-                                    <p>
-                                      <strong>Email:</strong> {request.email}
-                                    </p>
-                                    {request.phone && (
-                                      <p>
-                                        <strong>Phone:</strong> {request.phone}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <h4 className="font-semibold text-gray-800">
-                                      Project Details
-                                    </h4>
-                                    <p>
-                                      <strong>Type:</strong>{" "}
-                                      {request.projectType
-                                        ?.replace("-", " ")
-                                        .replace(/\b\w/g, (l) =>
-                                          l.toUpperCase()
-                                        )}
-                                    </p>
-                                    {request.rooms && (
-                                      <p>
-                                        <strong>Rooms:</strong>{" "}
-                                        {request.rooms.replace("-", " ")}
-                                      </p>
-                                    )}
-                                    {request.budget && (
-                                      <p>
-                                        <strong>Budget:</strong>{" "}
-                                        {request.budget
-                                          .replace("-", " - ")
-                                          .replace(/\b\w/g, (l) =>
-                                            l.toUpperCase()
-                                          )}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {request.description && (
-                                  <div>
-                                    <h4 className="font-semibold text-gray-800">
-                                      Project Description
-                                    </h4>
-                                    <div className="bg-gray-50 p-4 rounded-lg">
-                                      <p className="text-gray-700">
-                                        {request.description}
-                                      </p>
-                                    </div>
-                                  </div>
-                                )}
-
-                                <div className="pt-4 border-t">
-                                  <p className="text-sm text-gray-500">
-                                    Submitted:{" "}
-                                    {new Date(
-                                      request.created_at || request.createdAt
-                                    ).toLocaleString()}
-                                  </p>
-                                </div>
+                            }`}
+                          >
+                            <option value="new">New</option>
+                            <option value="contacted">Contacted</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                          </select>
+                        </td>
+                        <td className="px-6 py-4">
+                          <details className="relative">
+                            <summary className="text-emerald-600 hover:text-emerald-800 text-sm cursor-pointer font-medium">
+                              View
+                            </summary>
+                            <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border z-50 p-4 text-sm">
+                              <p className="font-semibold mb-2 text-gray-800">Description</p>
+                              <p className="text-gray-600 whitespace-pre-wrap">{req.description || "No description"}</p>
+                              <div className="mt-3 flex gap-3">
+                                <a
+                                  href={`mailto:${req.email}`}
+                                  className="text-emerald-600 hover:text-emerald-800 text-xs font-medium"
+                                >
+                                  Email: Email Client
+                                </a>
+                                <button
+                                  onClick={() => deleteRequest(req._id)}
+                                  className="text-red-600 hover:text-red-800 text-xs font-medium"
+                                >
+                                  Delete
+                                </button>
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          </details>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Analytics Tab */}
+        {/* ── ANALYTICS ── */}
         {activeTab === "analytics" && (
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                Engagement Analytics
-              </h2>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Monthly Project Uploads
-                  </h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={analytics.monthlyUploads}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip
-                        formatter={(value) => [value, "Projects Uploaded"]}
-                      />
-                      <Bar dataKey="uploads" fill="#10B981" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Top Performing Projects
-                  </h3>
-                  <div className="space-y-4 max-h-80 overflow-y-auto">
-                    {analytics.engagementStats.map((project, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                      >
-                        <div className="flex-1">
-                          <span className="font-medium text-sm">
-                            {project.name}
-                          </span>
-                          <div className="flex space-x-4 text-xs text-gray-600 mt-1">
-                            <span>👁️ {project.views}</span>
-                            <span>❤️ {project.favorites}</span>
-                            <span>💬 {project.inquiries}</span>
-                          </div>
-                        </div>
-                        <div className="w-16 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-emerald-600 h-2 rounded-full"
-                            style={{
-                              width: `${Math.min(
-                                (project.views /
-                                  Math.max(
-                                    ...analytics.engagementStats.map(
-                                      (p) => p.views
-                                    )
-                                  )) *
-                                  100,
-                                100
-                              )}%`,
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-xl shadow p-6">
+                <h3 className="font-semibold text-gray-800 mb-4">Monthly Uploads</h3>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={analytics.monthlyUploads}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="uploads" fill="#10B981" />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
 
-              {/* Additional Analytics Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Conversion Metrics
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">
-                        View to Inquiry Rate
-                      </span>
-                      <span className="font-semibold text-emerald-600">
-                        {analytics.totalViews > 0
-                          ? (
-                              (analytics.totalInquiries /
-                                analytics.totalViews) *
-                              100
-                            ).toFixed(1)
-                          : 0}
-                        %
-                      </span>
+              <div className="bg-white rounded-xl shadow p-6">
+                <h3 className="font-semibold text-gray-800 mb-4">Top Plans by Likes</h3>
+                <div className="space-y-3 max-h-72 overflow-y-auto">
+                  {analytics.engagementStats.map((p, i) => (
+                    <div key={i} className="flex items-center justify-between gap-4">
+                      <span className="text-sm text-gray-700 truncate flex-1">{p.name}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-emerald-500 h-2 rounded-full"
+                            style={{
+                              width: `${analytics.engagementStats[0]?.likes > 0
+                                ? (p.likes / analytics.engagementStats[0].likes) * 100
+                                : 0}%`,
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-500 w-6 text-right">{p.likes}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">
-                        Project Favorite Rate
-                      </span>
-                      <span className="font-semibold text-emerald-600">
-                        {analytics.totalViews > 0
-                          ? (
-                              (analytics.totalFavorites /
-                                analytics.totalViews) *
-                              100
-                            ).toFixed(1)
-                          : 0}
-                        %
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">
-                        Average Views per Project
-                      </span>
-                      <span className="font-semibold text-emerald-600">
-                        {analytics.totalProjects > 0
-                          ? Math.round(
-                              analytics.totalViews / analytics.totalProjects
-                            )
-                          : 0}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Activity Summary
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Active Projects</span>
-                      <span className="font-semibold text-emerald-600">
-                        {
-                          projects.filter((p) => p.status === "published")
-                            .length
-                        }
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Pending Inquiries</span>
-                      <span className="font-semibold text-yellow-600">
-                        {inquiries.filter((i) => i.status === "new").length}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">
-                        Custom Requests in Progress
-                      </span>
-                      <span className="font-semibold text-blue-600">
-                        {
-                          customDesignRequests.filter(
-                            (r) => r.status === "in-progress"
-                          ).length
-                        }
-                      </span>
-                    </div>
-                  </div>
+                  ))}
+                  {analytics.engagementStats.length === 0 && (
+                    <p className="text-gray-400 text-sm">No data yet</p>
+                  )}
                 </div>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Settings Tab */}
-        {activeTab === "settings" && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">
-              Platform Settings
-            </h2>
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3">
-                  Content Management
-                </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-xl shadow p-6">
+                <h3 className="font-semibold text-gray-800 mb-4">Conversion Metrics</h3>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">Auto-publish projects</p>
-                      <p className="text-sm text-gray-600">
-                        Automatically publish uploaded projects without review
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                    </label>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 text-sm">Inquiry to Plan Ratio</span>
+                    <span className="font-semibold text-emerald-600">
+                      {analytics.totalPlans > 0
+                        ? ((analytics.totalInquiries / analytics.totalPlans) * 100).toFixed(1)
+                        : 0}%
+                    </span>
                   </div>
-
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">Email notifications</p>
-                      <p className="text-sm text-gray-600">
-                        Receive email alerts for new inquiries and project
-                        uploads
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        defaultChecked
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                    </label>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 text-sm">Custom Request Rate</span>
+                    <span className="font-semibold text-emerald-600">
+                      {analytics.totalInquiries > 0
+                        ? ((analytics.totalCustomRequests / analytics.totalInquiries) * 100).toFixed(1)
+                        : 0}%
+                    </span>
                   </div>
-
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">Track user engagement</p>
-                      <p className="text-sm text-gray-600">
-                        Enable detailed analytics for project views and
-                        interactions
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        defaultChecked
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                    </label>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 text-sm">Avg Likes per Plan</span>
+                    <span className="font-semibold text-emerald-600">
+                      {analytics.totalPlans > 0
+                        ? (analytics.totalLikes / analytics.totalPlans).toFixed(1)
+                        : 0}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3">
-                  Data Management
-                </h3>
+              <div className="bg-white rounded-xl shadow p-6">
+                <h3 className="font-semibold text-gray-800 mb-4">Activity Summary</h3>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">Export Data</p>
-                      <p className="text-sm text-gray-600">
-                        Download all platform data as CSV files
-                      </p>
-                    </div>
-                    <button className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors">
-                      Export All
-                    </button>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 text-sm">New Inquiries</span>
+                    <span className="font-semibold text-yellow-600">
+                      {inquiries.filter((i) => i.status === "new").length}
+                    </span>
                   </div>
-
-                  <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
-                    <div>
-                      <p className="font-medium text-red-900">Danger Zone</p>
-                      <p className="text-sm text-red-700">
-                        Permanently delete all data. This action cannot be
-                        undone.
-                      </p>
-                    </div>
-                    <button className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
-                      Delete All Data
-                    </button>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 text-sm">In-Progress Inquiries</span>
+                    <span className="font-semibold text-blue-600">
+                      {inquiries.filter((i) => i.status === "in-progress").length}
+                    </span>
                   </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3">
-                  Backup & Security
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">Auto Backup</p>
-                      <p className="text-sm text-gray-600">
-                        Automatically backup database weekly
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        defaultChecked
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                    </label>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 text-sm">Pending Custom Requests</span>
+                    <span className="font-semibold text-yellow-600">
+                      {customRequests.filter((r) => r.status === "new").length}
+                    </span>
                   </div>
-
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">Two-Factor Authentication</p>
-                      <p className="text-sm text-gray-600">
-                        Enhance security with 2FA for admin accounts
-                      </p>
-                    </div>
-                    <button className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors">
-                      Setup 2FA
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">API Rate Limiting</p>
-                      <p className="text-sm text-gray-600">
-                        Limit API requests per IP to prevent abuse
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        defaultChecked
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                    </label>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 text-sm">Completed Requests</span>
+                    <span className="font-semibold text-emerald-600">
+                      {customRequests.filter((r) => r.status === "completed").length}
+                    </span>
                   </div>
                 </div>
               </div>
