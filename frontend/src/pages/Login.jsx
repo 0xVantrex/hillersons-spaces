@@ -1,14 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
-  Eye,
-  EyeOff,
-  Mail,
-  Lock,
-  AlertCircle,
-  CheckCircle2,
-  LogIn,
-  Shield,
-  ArrowRight,
+  Eye, EyeOff, Mail, Lock, AlertCircle,
+  CheckCircle2, LogIn, Shield, ArrowRight,
 } from "lucide-react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
@@ -18,27 +11,25 @@ import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 
 export default function Login() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const from = location.state?.from?.pathname || "/";
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const navigate  = useNavigate();
+  const location  = useLocation();
   const { login } = useAuth();
+  const from      = location.state?.from?.pathname || "/";
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [form, setForm]                   = useState({ email: "", password: "" });
+  const [error, setError]                 = useState("");
+  const [loading, setLoading]             = useState(false);
+  const [showPassword, setShowPassword]   = useState(false);
+  const [fieldErrors, setFieldErrors]     = useState({});
+  const [showSuccess, setShowSuccess]     = useState(false);
+  const [mounted, setMounted]             = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return "Please enter a valid email address";
-    return "";
+    return emailRegex.test(email) ? "" : "Please enter a valid email address";
   };
 
   const handleChange = (e) => {
@@ -47,37 +38,24 @@ export default function Login() {
     setError("");
 
     const errors = { ...fieldErrors };
-
     if (name === "email") {
       const emailError = validateEmail(value);
-      if (emailError) errors.email = emailError;
-      else delete errors.email;
+      emailError ? (errors.email = emailError) : delete errors.email;
     }
-
     if (name === "password") {
-      if (value.length < 6) {
-        errors.password = "Password must be at least 6 characters";
-      } else {
-        delete errors.password;
-      }
+      value.length < 6
+        ? (errors.password = "Password must be at least 6 characters")
+        : delete errors.password;
     }
-
     setFieldErrors(errors);
   };
 
-  // ── Role-based redirect helper ─────────────────────────────────────────────
   const redirectByRole = (user) => {
     if (user.role === "admin") {
       navigate("/admin/dashboard", { replace: true });
-    } else if (
-      ["vendor", "bnbHost", "contractor"].includes(user.role) &&
-      user.vendorStatus === "approved"
-    ) {
+    } else if (["vendor", "bnbHost", "contractor"].includes(user.role) && user.vendorStatus === "approved") {
       navigate("/vendor/dashboard", { replace: true });
-    } else if (
-      ["vendor", "bnbHost", "contractor"].includes(user.role) &&
-      user.vendorStatus === "pending"
-    ) {
+    } else if (["vendor", "bnbHost", "contractor"].includes(user.role) && user.vendorStatus === "pending") {
       navigate("/vendor/apply", { replace: true });
     } else {
       navigate(from, { replace: true });
@@ -92,9 +70,7 @@ export default function Login() {
     const errors = {};
     const emailError = validateEmail(form.email);
     if (emailError) errors.email = emailError;
-    if (form.password.length < 6) {
-      errors.password = "Password must be at least 6 characters";
-    }
+    if (form.password.length < 6) errors.password = "Password must be at least 6 characters";
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -103,27 +79,22 @@ export default function Login() {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const res  = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: form.email, password: form.password }),
       });
-
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.message || "Invalid username or password");
+        setError(data.message || "Invalid email or password");
         setLoading(false);
         return;
       }
 
-      const { token, user } = data;
-      login(user, token);
+      login(data.user, data.token);
       setShowSuccess(true);
-
-      setTimeout(() => {
-        redirectByRole(user);
-      }, 900);
+      setTimeout(() => redirectByRole(data.user), 900);
     } catch (err) {
       console.error("Login error:", err);
       setError("Failed to sign in. Please check your credentials and try again.");
@@ -134,244 +105,268 @@ export default function Login() {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      const idToken = credentialResponse.credential;
-
       const res = await axios.post(`${API_BASE_URL}/api/auth/google`, {
-        tokenId: idToken,
+        tokenId: credentialResponse.credential,
       });
-
-      const { token: gToken, user: gUser } = res.data;
-      login(gUser, gToken);
-      redirectByRole(gUser);
+      login(res.data.user, res.data.token);
+      redirectByRole(res.data.user);
     } catch (err) {
-      console.error("Google signup error:", err);
-      setError("Google signup failed: " + err.message);
+      console.error("Google login error:", err);
+      setError("Google sign-in failed. Please try again.");
     }
   };
 
-  const handleForgotPassword = () => {
-    setShowForgotPassword(true);
+  // Input border state helper
+  const inputBorder = (field) => {
+    if (fieldErrors[field]) return "border-brand-400 focus:border-brand-600";
+    if (form[field] && !fieldErrors[field]) return "border-brand-300 focus:border-brand-600";
+    return "border-brand-200 hover:border-brand-300 focus:border-brand-500";
   };
 
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-lime-50 flex items-center justify-center p-4 relative overflow-hidden">
-      <ForgotPassword />
+    <>
+      {/* JSON-LD for SEO */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Sign In — Hillersons Designs",
+        "description": "Sign in to your Hillersons Designs account to access free architectural house plans, save favourites, and manage your design requests.",
+        "url": "https://hillersons-architecture-site.vercel.app/login",
+      })}} />
 
-      {/* Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-4 -left-4 w-72 h-72 bg-gradient-to-r from-green-400/20 to-lime-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-4 -right-4 w-96 h-96 bg-gradient-to-r from-lime-400/20 to-green-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-      </div>
+      <div className="min-h-screen bg-brand-50 flex items-center justify-center p-4 relative overflow-hidden">
 
-      <div className="w-full max-w-md relative z-10">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-green-600 to-lime-600 rounded-3xl mb-6 shadow-2xl transform hover:scale-105 transition-transform duration-300">
-            <Shield className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-lime-600 bg-clip-text text-transparent mb-2">
-            Welcome Back
-          </h1>
-          <p className="text-gray-600">Sign in to your account</p>
+        {/* Background blobs */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+          <div className="absolute -top-4 -left-4 w-72 h-72 bg-brand-200 rounded-full blur-3xl opacity-30 animate-pulse" />
+          <div className="absolute -bottom-4 -right-4 w-96 h-96 bg-brand-100 rounded-full blur-3xl opacity-40 animate-pulse" />
         </div>
 
-        {/* Main Form Card */}
-        <div className="bg-white/90 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/30 p-8 space-y-6 transform hover:shadow-3xl transition-all duration-300">
-          {showSuccess && (
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-lime-50 border border-green-200 rounded-2xl text-green-700 animate-fadeIn">
-              <CheckCircle2 className="w-6 h-6 text-green-600 animate-bounce" />
-              <div>
-                <h3 className="font-semibold">Login Successful!</h3>
-                <p className="text-sm">Redirecting you now...</p>
+        <main className="w-full max-w-md relative z-10">
+
+          {/* Page header */}
+          <header className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-18 h-18 w-16 h-16 bg-brand-600 rounded-2xl mb-5 shadow-xl hover:scale-105 transition-transform duration-300">
+              <Shield className="w-8 h-8 text-white" aria-hidden="true" />
+            </div>
+            <h1 className="text-4xl font-bold text-brand-900 mb-2">Welcome Back</h1>
+            <p className="text-brand-600 text-sm">
+              Sign in to access your free architectural plans and design requests
+            </p>
+          </header>
+
+          {/* Card */}
+          <div className="bg-white rounded-2xl shadow-xl border border-brand-100 p-8 space-y-6">
+
+            {/* Success banner */}
+            {showSuccess && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex items-center gap-3 p-4 bg-brand-50 border border-brand-200 rounded-xl text-brand-700 animate-fadeIn"
+              >
+                <CheckCircle2 className="w-5 h-5 text-brand-600 flex-shrink-0" aria-hidden="true" />
+                <div>
+                  <p className="font-semibold text-sm">Login Successful!</p>
+                  <p className="text-xs text-brand-600">Redirecting you now...</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {error && (
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-2xl text-red-700 animate-shake">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span className="text-sm">{error}</span>
-            </div>
-          )}
-
-          <div className="space-y-6">
-            {/* Email */}
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">
-                Email Address
-              </label>
-              <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors duration-200" />
-                <input
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder="Enter your email"
-                  required
-                  className={`w-full pl-12 pr-4 py-4 border-2 rounded-2xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-green-500/20 bg-white/50 backdrop-blur-sm hover:bg-white/70 ${
-                    fieldErrors.email
-                      ? "border-red-300 bg-red-50/50 focus:border-red-500"
-                      : form.email && !fieldErrors.email
-                      ? "border-green-300 bg-green-50/50 focus:border-green-500"
-                      : "border-gray-200 hover:border-gray-300 focus:border-green-500"
-                  }`}
-                />
-                {form.email && !fieldErrors.email && (
-                  <CheckCircle2 className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 animate-fadeIn" />
-                )}
+            {/* Error banner */}
+            {error && (
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="flex items-center gap-3 p-4 bg-brand-50 border border-brand-300 rounded-xl text-brand-800 animate-shake"
+              >
+                <AlertCircle className="w-5 h-5 text-brand-600 flex-shrink-0" aria-hidden="true" />
+                <span className="text-sm">{error}</span>
               </div>
-              {fieldErrors.email && (
-                <p className="text-sm text-red-600 flex items-center gap-1 animate-slideDown">
-                  <AlertCircle className="w-4 h-4" />
-                  {fieldErrors.email}
-                </p>
-              )}
-            </div>
+            )}
 
-            {/* Password */}
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">
-                Password
-              </label>
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors duration-200" />
-                <input
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="Enter your password"
-                  required
-                  className={`w-full pl-12 pr-14 py-4 border-2 rounded-2xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-green-500/20 bg-white/50 backdrop-blur-sm hover:bg-white/70 ${
-                    fieldErrors.password
-                      ? "border-red-300 bg-red-50/50 focus:border-red-500"
-                      : "border-gray-200 hover:border-gray-300 focus:border-green-500"
-                  }`}
-                />
+            <form onSubmit={handleEmailLogin} noValidate aria-label="Sign in form">
+              <div className="space-y-5">
+
+                {/* Email */}
+                <div>
+                  <label htmlFor="email" className="block text-sm font-semibold text-brand-800 mb-2">
+                    Email Address
+                  </label>
+                  <div className="relative group">
+                    <Mail
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400 group-focus-within:text-brand-600 transition-colors"
+                      aria-hidden="true"
+                    />
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={form.email}
+                      onChange={handleChange}
+                      placeholder="your.email@example.com"
+                      required
+                      autoComplete="email"
+                      aria-describedby={fieldErrors.email ? "email-error" : undefined}
+                      aria-invalid={!!fieldErrors.email}
+                      className={`w-full pl-12 pr-10 py-3.5 border-2 rounded-xl transition focus:outline-none focus:ring-2 focus:ring-brand-200 bg-white text-brand-900 placeholder-brand-300 text-sm ${inputBorder("email")}`}
+                    />
+                    {form.email && !fieldErrors.email && (
+                      <CheckCircle2
+                        className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-500"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </div>
+                  {fieldErrors.email && (
+                    <p id="email-error" role="alert" className="text-xs text-brand-700 flex items-center gap-1 mt-1.5">
+                      <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                      {fieldErrors.email}
+                    </p>
+                  )}
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label htmlFor="password" className="block text-sm font-semibold text-brand-800 mb-2">
+                    Password
+                  </label>
+                  <div className="relative group">
+                    <Lock
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400 group-focus-within:text-brand-600 transition-colors"
+                      aria-hidden="true"
+                    />
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={form.password}
+                      onChange={handleChange}
+                      placeholder="Enter your password"
+                      required
+                      autoComplete="current-password"
+                      aria-describedby={fieldErrors.password ? "password-error" : undefined}
+                      aria-invalid={!!fieldErrors.password}
+                      className={`w-full pl-12 pr-12 py-3.5 border-2 rounded-xl transition focus:outline-none focus:ring-2 focus:ring-brand-200 bg-white text-brand-900 placeholder-brand-300 text-sm ${inputBorder("password")}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-400 hover:text-brand-600 transition-colors"
+                    >
+                      {showPassword
+                        ? <EyeOff className="w-5 h-5" aria-hidden="true" />
+                        : <Eye className="w-5 h-5" aria-hidden="true" />
+                      }
+                    </button>
+                  </div>
+                  {fieldErrors.password && (
+                    <p id="password-error" role="alert" className="text-xs text-brand-700 flex items-center gap-1 mt-1.5">
+                      <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                      {fieldErrors.password}
+                    </p>
+                  )}
+                </div>
+
+                {/* Forgot password */}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-sm text-brand-600 hover:text-brand-800 hover:underline font-medium transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+
+                {/* Submit */}
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                  type="submit"
+                  disabled={loading || Object.keys(fieldErrors).length > 0 || !form.email || !form.password}
+                  className="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-brand-300 text-white font-bold py-3.5 px-6 rounded-xl transition-all duration-300 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand-400 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 group flex items-center justify-center gap-2"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {loading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />
+                      Signing in...
+                    </>
+                  ) : (
+                    <>
+                      <LogIn className="w-5 h-5" aria-hidden="true" />
+                      Sign In
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+                    </>
+                  )}
                 </button>
               </div>
-              {fieldErrors.password && (
-                <p className="text-sm text-red-600 flex items-center gap-1 animate-slideDown">
-                  <AlertCircle className="w-4 h-4" />
-                  {fieldErrors.password}
-                </p>
-              )}
+            </form>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3" aria-hidden="true">
+              <div className="flex-1 h-px bg-brand-100" />
+              <span className="text-xs text-brand-400 bg-white px-3 py-1 rounded-full border border-brand-100">or</span>
+              <div className="flex-1 h-px bg-brand-100" />
             </div>
 
-            {/* Forgot Password */}
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                className="text-sm text-green-600 hover:text-green-700 hover:underline font-medium transition-colors duration-200"
+            {/* Google login */}
+            <div aria-label="Sign in with Google">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => {
+                  console.error("Google login failed");
+                  setError("Google sign-in failed. Please try again.");
+                }}
+              />
+            </div>
+
+            {/* Links */}
+            <p className="text-center text-sm text-brand-600">
+              Don't have an account?{" "}
+              <Link
+                to="/signup"
+                className="text-brand-700 hover:text-brand-900 hover:underline font-semibold transition-colors"
               >
-                Forgot password?
-              </button>
-            </div>
+                Create Account
+              </Link>
+            </p>
 
-            {/* Login Button */}
-            <button
-              onClick={handleEmailLogin}
-              disabled={
-                loading ||
-                Object.keys(fieldErrors).length > 0 ||
-                !form.email ||
-                !form.password
-              }
-              className="w-full bg-gradient-to-r from-green-600 to-lime-600 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 hover:from-green-700 hover:to-lime-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-4 focus:ring-green-500/30 shadow-xl hover:shadow-2xl transform hover:scale-105 active:scale-95 group"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center gap-3">
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Signing in...
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-2">
-                  <LogIn className="w-5 h-5" />
-                  Sign In
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
-                </div>
-              )}
-            </button>
+            <p className="text-center text-sm text-brand-500">
+              Want to sell on Hillersons?{" "}
+              <Link
+                to="/vendor/apply"
+                className="text-brand-600 hover:text-brand-800 hover:underline font-semibold transition-colors"
+              >
+                Apply as a Vendor
+              </Link>
+            </p>
           </div>
+        </main>
 
-          {/* Divider */}
-          <div className="flex items-center gap-4">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
-            <span className="text-sm text-gray-500 bg-white/80 px-4 py-1 rounded-full border border-gray-200">
-              or
-            </span>
-            <div className="flex-1 h-px bg-gradient-to-l from-transparent via-gray-300 to-transparent" />
-          </div>
+        {/* Forgot password modal */}
+        <ForgotPassword
+          isOpen={showForgotPassword}
+          onClose={() => setShowForgotPassword(false)}
+          API_BASE_URL={API_BASE_URL}
+          setError={setError}
+        />
 
-          {/* Google Login */}
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={() => {
-              console.error("Google login failed");
-              setError("Google login failed");
-            }}
-          />
-
-          {/* Signup Link */}
-          <p className="text-center text-sm text-gray-600">
-            Don't have an account?{" "}
-            <Link
-              to="/signup"
-              className="text-green-600 hover:text-green-700 hover:underline font-semibold transition-colors duration-200"
-            >
-              Create Account
-            </Link>
-          </p>
-
-          {/* Vendor apply link */}
-          <p className="text-center text-sm text-gray-500">
-            Want to sell on Hillersons?{" "}
-            <Link
-              to="/vendor/apply"
-              className="text-emerald-600 hover:text-emerald-700 hover:underline font-semibold transition-colors duration-200"
-            >
-              Apply as a Vendor
-            </Link>
-          </p>
-        </div>
+        <style>{`
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25%       { transform: translateX(-4px); }
+            75%       { transform: translateX(4px); }
+          }
+          .animate-fadeIn { animation: fadeIn 0.4s ease-out; }
+          .animate-shake  { animation: shake 0.4s ease-in-out; }
+        `}</style>
       </div>
-
-      {/* Forgot Password Modal */}
-      <ForgotPassword
-        isOpen={showForgotPassword}
-        onClose={() => setShowForgotPassword(false)}
-        API_BASE_URL={API_BASE_URL}
-        setError={setError}
-      />
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideDown {
-          from { opacity: 0; transform: translateY(-5px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-5px); }
-          75% { transform: translateX(5px); }
-        }
-        .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
-        .animate-slideDown { animation: slideDown 0.3s ease-out; }
-        .animate-shake { animation: shake 0.5s ease-in-out; }
-      `}</style>
-    </div>
+    </>
   );
 }

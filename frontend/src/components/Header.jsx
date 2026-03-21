@@ -1,29 +1,112 @@
 import {
-  Search,
-  Home,
-  Building,
-  ChevronDown,
-  Phone,
-  Menu,
-  Send,
-  X,
-  Mail,
-  MapPin,
-  Award,
-  Users,
-  Palette,
-  Hammer,
-  Star,
-  Globe,
-  Shield,
-  ArrowRight,
-  Sparkles,
-  ShoppingCart,
-  User,
-  BedDouble,
+  Search, Home, Building, ChevronDown, Phone,
+  Menu, Send, X, Mail, MapPin, Award, Users,
+  Palette, Hammer, Globe, Shield, ArrowRight,
+  Sparkles, ShoppingCart, User, BedDouble,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate, Link } from "react-router-dom";
 
+/* ─── WhatsApp icon (inline SVG) ─────────────────────────────── */
+const WhatsAppIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-5 h-5" aria-hidden="true">
+    <path d="M20.52 3.48A11.949 11.949 0 0012 0C5.373 0 .001 5.373.001 12c0 2.121.657 4.084 1.779 5.722L0 24l6.378-1.675A11.949 11.949 0 0012 24c6.627 0 12-5.373 12-12 0-3.195-1.246-6.198-3.48-8.52zM12 22c-1.905 0-3.713-.612-5.205-1.654l-.372-.22-3.787.995.997-3.692-.242-.374A9.958 9.958 0 012 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10zm5.338-7.667c-.297-.149-1.758-.867-2.031-.967-.273-.1-.472-.149-.672.15-.198.297-.767.966-.941 1.164-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.447-.52.151-.174.2-.298.3-.497.1-.198.05-.372-.025-.52-.075-.149-.672-1.612-.921-2.206-.242-.579-.487-.5-.672-.51l-.573-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+  </svg>
+);
+
+/* ─── Contact links data ──────────────────────────────────────── */
+const CONTACT_LINKS = [
+  {
+    href: "https://wa.me/254763831806?text=Hello%20Hillersons%20Spaces,%20I%20would%20like%20to%20inquire%20about%20your%20services.",
+    external: true,
+    label: "WhatsApp Us",
+    iconBg: "bg-brand-600",
+    Icon: WhatsAppIcon,
+  },
+  {
+    href: "mailto:HillersonsDesigns@gmail.com",
+    label: "Email Us",
+    iconBg: "bg-brand-700",
+    Icon: Mail,
+  },
+  {
+    href: "https://www.google.com/maps/place/Rehema+House,+6th+floor+Standard+St,+Nairobi/@-1.2847631,36.8228179,21z",
+    external: true,
+    label: "Our Location",
+    iconBg: "bg-brand-600",
+    Icon: MapPin,
+  },
+  {
+    href: "tel:+254763831806",
+    label: "Call Us",
+    iconBg: "bg-brand-600",
+    Icon: Phone,
+  },
+  {
+    href: "/contact",
+    label: "Contact Page",
+    iconBg: "bg-gray-100",
+    Icon: Send,
+    iconColor: "text-gray-600",
+  },
+];
+
+/* ─── Services data ───────────────────────────────────────────── */
+const SERVICES = [
+  { Icon: Home,      label: "Architectural Plans",    desc: "Custom homes, luxury villas & modern apartments",         href: "/allProducts",                           iconBg: "bg-brand-600" },
+  { Icon: Globe,     label: "Commercial Projects",    desc: "Office buildings, retail spaces & more",                  href: "/categories/commercial projects",         iconBg: "bg-brand-700" },
+  { Icon: Users,     label: "Residential Projects",   desc: "Residential apartments, estates & developments",          href: "/categories/Residential projects",        iconBg: "bg-brand-500" },
+  { Icon: Award,     label: "Social Amenities",       desc: "Hospitals, schools & community facilities",              href: "/categories/social amenities projects",   iconBg: "bg-lime-600"  },
+  { Icon: Hammer,    label: "Renovation & Remodeling",desc: "Transform and modernize your existing space",             href: "/categories/renovation work",             iconBg: "bg-brand-800" },
+  { Icon: Palette,   label: "Interior Design",        desc: "Complete interior solutions & space planning",            href: "/categories/interior design",             iconBg: "bg-lime-700"  },
+  { Icon: BedDouble, label: "BNB Stays",              desc: "Book short-stay properties across Kenya",                 href: "/bnb",                                    iconBg: "bg-lime-600"  },
+];
+
+/* ─── Dropdown wrapper with outside-click close ───────────────── */
+function Dropdown({ id, trigger, children }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className="relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      {trigger({ open, toggle: () => setOpen((v) => !v) })}
+      {open && (
+        <div
+          id={`dd-${id}`}
+          role="menu"
+          aria-label={id}
+          className="absolute left-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50"
+        >
+          {children({ close: () => setOpen(false) })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Shared nav link class ───────────────────────────────────── */
+const navLinkCls =
+  "flex items-center gap-3 px-4 py-3 hover:bg-brand-50 rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-inset";
+
+/* ════════════════════════════════════════════════════════════════ */
 const Header = ({
   showSearch,
   searchQuery,
@@ -32,348 +115,368 @@ const Header = ({
   setShowMobileMenu,
   setShowSearch,
 }) => {
-  const [activeDropdown, setActiveDropdown] = useState(null);
+  const navigate   = useNavigate(); // ✅ Bug fix: React Router navigation, no full reloads
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 50);
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    window.addEventListener("scroll", handleScroll);
-    window.addEventListener("resize", checkMobile);
-    checkMobile();
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", checkMobile);
-    };
+    const onScroll = () => setIsScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const handleNavigation = (path) => {
-    window.location.href = path;
+  // ✅ Bug fix: close mobile menu on route navigation
+  const goTo = useCallback((path) => {
+    setShowMobileMenu(false);
+    navigate(path);
+  }, [navigate, setShowMobileMenu]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
   };
 
   return (
     <>
-      {/* Top accent bar — plain, no gradient animation */}
-      <div className="w-full h-0.5 bg-emerald-600" />
+      {/* Top accent bar */}
+      <div className="w-full h-1 bg-gradient-to-r from-brand-600 via-lime-400 to-brand-600 fixed top-0 left-0 right-0 z-50" aria-hidden="true" />
 
-      {/* Main Header */}
+      {/* Main header */}
       <header
-        className={`fixed top-0.5 left-0 right-0 z-50 transition-all duration-500 ${
+        className={`fixed top-1 left-0 right-0 z-40 transition-all duration-300 ${
           isScrolled
-            ? "bg-white shadow-2xl border-b border-slate-200/80"
-            : "bg-white shadow-xl border-b border-slate-200/50"
+            ? "bg-white shadow-xl border-b border-gray-200"
+            : "bg-white shadow-md border-b border-gray-100"
         }`}
+        role="banner"
       >
         <div className="container mx-auto px-4 lg:px-6">
           <div className="flex items-center justify-between h-16 lg:h-20">
 
             {/* Logo */}
-            <div
-              className="flex items-center gap-2 lg:gap-4 group cursor-pointer flex-shrink-0"
-              onClick={() => handleNavigation("/")}
+            <Link
+              to="/"
+              className="flex items-center gap-2 lg:gap-3 group flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-brand-400 rounded-xl"
+              aria-label="Hillersons Spaces — go to homepage"
             >
-              <div className="relative">
-                <div className="bg-emerald-600 text-white p-2 lg:p-4 rounded-xl lg:rounded-2xl shadow-2xl group-hover:shadow-emerald-300/40 transition-all duration-500 group-hover:scale-105">
-                  <Building className="w-5 h-5 lg:w-8 lg:h-8" />
-                </div>
+              <div className="bg-brand-600 text-white p-2 lg:p-3 rounded-xl shadow-lg group-hover:shadow-brand-300/40 group-hover:scale-105 transition-all duration-300">
+                <Building className="w-5 h-5 lg:w-7 lg:h-7" aria-hidden="true" />
               </div>
               <div>
-                <h1 className="text-lg lg:text-2xl font-black text-slate-800 tracking-tight">
-                  Hillersons
-                  <span className="text-emerald-600 font-light sm:inline">Spaces</span>
-                </h1>
-                <p className="text-xs text-slate-500 font-medium tracking-wide hidden lg:block">
+                <p className="text-lg lg:text-2xl font-black text-gray-800 tracking-tight leading-none">
+                  Hillersons<span className="text-brand-600 font-light">Spaces</span>
+                </p>
+                <p className="text-xs text-gray-500 font-medium hidden lg:block mt-0.5">
                   Your Vision,{" "}
                   <span className="text-lime-600 font-semibold">Our Efficient Solution</span>
                 </p>
               </div>
-            </div>
+            </Link>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center space-x-0">
+            {/* Desktop nav */}
+            <nav className="hidden lg:flex items-center gap-0" aria-label="Main navigation">
               {[
-                { href: "/", icon: Home, label: "Home" },
-                { href: "/custom-design", icon: Building, label: "Custom design" },
-                { href: "/bnb", icon: BedDouble, label: "BNB Stays" },
-              ].map(({ href, icon: Icon, label }) => (
-                <a
+                { to: "/",             Icon: Home,      label: "Home" },
+                { to: "/custom-design",Icon: Building,  label: "Custom Design" },
+                { to: "/bnb",          Icon: BedDouble, label: "BNB Stays" },
+              ].map(({ to, Icon, label }) => (
+                <Link
                   key={label}
-                  href={href}
-                  className="relative flex items-center gap-1 px-3 xl:px-5 py-2 xl:py-3 text-slate-700 font-medium hover:text-emerald-600 transition-all duration-300 rounded-xl hover:bg-emerald-50 group text-sm xl:text-base"
+                  to={to}
+                  className="flex items-center gap-1.5 px-4 xl:px-5 py-2.5 text-gray-600 font-medium hover:text-brand-600 hover:bg-brand-50 transition-colors duration-200 rounded-xl text-sm xl:text-base focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-inset"
                 >
-                  <Icon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  <Icon className="w-4 h-4" aria-hidden="true" />
                   {label}
-                </a>
+                </Link>
               ))}
 
-              {/* Contact Dropdown */}
-              <div
-                className="relative"
-                onMouseEnter={() => !isMobile && setActiveDropdown("Contact")}
-                onMouseLeave={() => !isMobile && setActiveDropdown(null)}
+              {/* Contact dropdown */}
+              <Dropdown
+                id="Contact"
+                trigger={({ open, toggle }) => (
+                  <button
+                    onClick={toggle}
+                    aria-haspopup="menu"
+                    aria-expanded={open}
+                    aria-controls="dd-Contact"
+                    className="flex items-center gap-1.5 px-4 xl:px-5 py-2.5 text-gray-600 font-medium hover:text-brand-600 hover:bg-brand-50 transition-colors duration-200 rounded-xl text-sm xl:text-base focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-inset"
+                  >
+                    <Phone className="w-4 h-4" aria-hidden="true" />
+                    Contact
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`} aria-hidden="true" />
+                  </button>
+                )}
               >
-                <button
-                  className="flex items-center gap-2 px-3 xl:px-5 py-2 xl:py-3 text-slate-700 font-medium hover:text-emerald-600 transition duration-300 rounded-xl hover:bg-emerald-50 group text-sm xl:text-base"
-                  onClick={() => isMobile && setActiveDropdown(activeDropdown === "Contact" ? null : "Contact")}
-                >
-                  <Phone className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  Contact
-                  <ChevronDown className={`w-4 h-4 transform transition-transform duration-300 ${activeDropdown === "Contact" ? "rotate-180" : ""}`} />
-                </button>
-                {activeDropdown === "Contact" && (
-                  <div className="absolute left-0 top-full mt-3 w-[300px] bg-white rounded-2xl shadow-2xl py-4 border border-slate-200/60 z-40">
-                    <div className="space-y-2 px-6">
+                {({ close }) => (
+                  <div className="w-72 py-3 px-3">
+                    {CONTACT_LINKS.map(({ href, external, label, iconBg, Icon, iconColor }) => (
                       <a
-                        href="https://wa.me/254763831806?text=Hello%20Hillersons%20Spaces,%20I%20would%20like%20to%20inquire%20about%20your%20services."
-                        target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-emerald-50 rounded-xl transition-all duration-300"
+                        key={label}
+                        href={href}
+                        role="menuitem"
+                        {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                        onClick={close}
+                        className={navLinkCls}
                       >
-                        <span className="bg-emerald-600 p-2 rounded-lg">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-5 h-5">
-                            <path d="M20.52 3.48A11.949 11.949 0 0012 0C5.373 0 .001 5.373.001 12c0 2.121.657 4.084 1.779 5.722L0 24l6.378-1.675A11.949 11.949 0 0012 24c6.627 0 12-5.373 12-12 0-3.195-1.246-6.198-3.48-8.52zM12 22c-1.905 0-3.713-.612-5.205-1.654l-.372-.22-3.787.995.997-3.692-.242-.374A9.958 9.958 0 012 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10zm5.338-7.667c-.297-.149-1.758-.867-2.031-.967-.273-.1-.472-.149-.672.15-.198.297-.767.966-.941 1.164-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.447-.52.151-.174.2-.298.3-.497.1-.198.05-.372-.025-.52-.075-.149-.672-1.612-.921-2.206-.242-.579-.487-.5-.672-.51l-.573-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-                          </svg>
+                        <span className={`${iconBg} p-2 rounded-lg flex-shrink-0`}>
+                          <Icon className={`w-4 h-4 ${iconColor || "text-white"}`} />
                         </span>
-                        <span className="text-slate-700 font-medium">WhatsApp Us</span>
+                        <span className="text-gray-700 font-medium text-sm">{label}</span>
                       </a>
-                      <a href="mailto:HillersonsDesigns@gmail.com"
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-emerald-50 rounded-xl transition-all duration-300">
-                        <span className="bg-blue-500 p-2 rounded-lg"><Mail className="w-5 h-5 text-white" /></span>
-                        <span className="text-slate-700 font-medium">Email Us</span>
-                      </a>
-                      <a href="https://www.google.com/maps/place/Rehema+House,+6th+floor+Standard+St,+Nairobi/@-1.2847631,36.8228179,21z"
-                        target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-emerald-50 rounded-xl transition-all duration-300">
-                        <span className="bg-red-500 p-2 rounded-lg"><MapPin className="w-5 h-5 text-white" /></span>
-                        <span className="text-slate-700 font-medium">Our Location</span>
-                      </a>
-                      <a href="tel:+254763831806"
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-emerald-50 rounded-xl transition-all duration-300">
-                        <span className="bg-emerald-600 p-2 rounded-lg"><Phone className="w-5 h-5 text-white" /></span>
-                        <span className="text-slate-700 font-medium">Call Us</span>
-                      </a>
-                      <a href="/contact"
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-emerald-50 rounded-xl transition-all duration-300">
-                        <span className="bg-gray-100 p-2 rounded-lg"><Send className="w-4 h-4 text-gray-600" /></span>
-                        <span className="text-slate-700 font-medium">Contact Page</span>
-                      </a>
-                    </div>
+                    ))}
                   </div>
                 )}
-              </div>
+              </Dropdown>
 
-              {/* Services Dropdown */}
-              <div
-                className="relative"
-                onMouseEnter={() => !isMobile && setActiveDropdown("services")}
-                onMouseLeave={() => !isMobile && setActiveDropdown(null)}
+              {/* Services dropdown */}
+              <Dropdown
+                id="Services"
+                trigger={({ open, toggle }) => (
+                  <button
+                    onClick={toggle}
+                    aria-haspopup="menu"
+                    aria-expanded={open}
+                    aria-controls="dd-Services"
+                    className="flex items-center gap-1.5 px-4 xl:px-5 py-2.5 text-gray-600 font-medium hover:text-brand-600 hover:bg-brand-50 transition-colors duration-200 rounded-xl text-sm xl:text-base focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-inset"
+                  >
+                    <Sparkles className="w-4 h-4" aria-hidden="true" />
+                    Services
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`} aria-hidden="true" />
+                  </button>
+                )}
               >
-                <button
-                  className="flex items-center gap-2 px-3 xl:px-5 py-2 xl:py-3 text-slate-700 font-medium hover:text-emerald-600 transition duration-300 rounded-xl hover:bg-emerald-50 group text-sm xl:text-base"
-                  onClick={() => isMobile && setActiveDropdown(activeDropdown === "services" ? null : "services")}
-                >
-                  <Sparkles className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  Services
-                  <ChevronDown className={`w-4 h-4 transform transition-transform duration-300 ${activeDropdown === "services" ? "rotate-180" : ""}`} />
-                </button>
-                {activeDropdown === "services" && (
-                  <div className="absolute left-0 top-full mt-3 w-[380px] xl:w-[420px] bg-white rounded-2xl shadow-2xl py-6 xl:py-8 border border-slate-200/60 z-40 max-h-[70vh] overflow-y-auto">
-                    <div className="px-6 xl:px-8 pb-4 xl:pb-6 border-b border-slate-100">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-6 h-6 xl:w-8 xl:h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-                          <Award className="w-3 h-3 xl:w-4 xl:h-4 text-white" />
+                {({ close }) => (
+                  <div className="w-96 xl:w-[420px] max-h-[72vh] overflow-y-auto">
+                    {/* Header */}
+                    <div className="px-5 py-4 border-b border-gray-100">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-7 h-7 bg-brand-600 rounded-lg flex items-center justify-center">
+                          <Award className="w-4 h-4 text-white" aria-hidden="true" />
                         </div>
-                        <h3 className="text-lg xl:text-xl font-bold text-slate-800">Our Expertise</h3>
+                        <h3 className="font-bold text-gray-800">Our Expertise</h3>
                       </div>
-                      <p className="text-sm text-slate-600 leading-relaxed">
-                        Comprehensive architectural solutions with 15+ years of excellence
-                      </p>
+                      <p className="text-xs text-gray-500">Comprehensive architectural solutions — 15+ years of excellence</p>
                     </div>
-                    <div className="p-6 xl:p-8 space-y-2 xl:space-y-3">
-                      {[
-                        { icon: Home, label: "Architectural house plans", desc: "Custom homes, luxury villas & modern apartments", bg: "bg-emerald-600", href: "/allProducts" },
-                        { icon: Globe, label: "Commercial Projects", desc: "Office buildings, retail spaces & more", bg: "bg-blue-500", href: "/categories/commercial projects" },
-                        { icon: Users, label: "Residential Projects", desc: "Residential apartments, estates & developments", bg: "bg-emerald-500", href: "/categories/Residential projects" },
-                        { icon: Star, label: "Social Amenities", desc: "Hospitals, schools & community facilities", bg: "bg-amber-500", href: "/categories/social amenities projects" },
-                        { icon: Hammer, label: "Renovation & Remodeling", desc: "Transform and modernize your existing space", bg: "bg-orange-500", href: "/categories/renovation work" },
-                        { icon: Palette, label: "Interior Design", desc: "Complete interior solutions & space planning", bg: "bg-purple-500", href: "/categories/interior design" },
-                        { icon: BedDouble, label: "BNB Stays", desc: "Book short-stay properties across Kenya", bg: "bg-lime-600", href: "/bnb" },
-                      ].map(({ icon: Icon, label, desc, bg, href }) => (
-                        <a key={label} href={href}
-                          className="flex items-center gap-4 xl:gap-5 px-4 xl:px-5 py-3 xl:py-4 rounded-xl xl:rounded-2xl hover:bg-emerald-50 group transition-all duration-300">
-                          <div className={`w-10 h-10 xl:w-14 xl:h-14 ${bg} rounded-lg xl:rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}>
-                            <Icon className="w-4 h-4 xl:w-6 xl:h-6 text-white" />
+
+                    {/* Service links */}
+                    <div className="p-3 space-y-0.5">
+                      {SERVICES.map(({ Icon, label, desc, href, iconBg }) => (
+                        <Link
+                          key={label}
+                          to={href}
+                          role="menuitem"
+                          onClick={close}
+                          className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-brand-50 group transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-inset"
+                        >
+                          <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform shadow-sm`}>
+                            <Icon className="w-5 h-5 text-white" aria-hidden="true" />
                           </div>
-                          <div className="flex-1">
-                            <h4 className="font-bold text-slate-800 group-hover:text-emerald-600 transition-colors text-sm xl:text-base">{label}</h4>
-                            <p className="text-xs xl:text-sm text-slate-600 leading-relaxed">{desc}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-800 group-hover:text-brand-600 transition-colors text-sm">{label}</p>
+                            <p className="text-xs text-gray-500 leading-relaxed truncate">{desc}</p>
                           </div>
-                          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
-                        </a>
+                          <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-brand-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" aria-hidden="true" />
+                        </Link>
                       ))}
                     </div>
-                    <div className="px-6 xl:px-8 pt-4 xl:pt-6 border-t border-slate-100">
-                      <button className="w-full bg-emerald-600 text-white px-6 py-2.5 xl:py-3 rounded-xl xl:rounded-2xl font-semibold shadow-lg hover:bg-emerald-700 transition-all duration-300 flex items-center justify-center gap-2 text-sm xl:text-base">
-                        <Shield className="w-4 h-4" />
+
+                    {/* Footer CTA */}
+                    <div className="px-5 py-4 border-t border-gray-100">
+                      <Link
+                        to="/allProducts"
+                        role="menuitem"
+                        onClick={close}
+                        className="w-full bg-brand-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-brand-700 transition-colors flex items-center justify-center gap-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+                      >
+                        <Shield className="w-4 h-4" aria-hidden="true" />
                         View All Services
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 )}
-              </div>
+              </Dropdown>
             </nav>
 
-            {/* Desktop Search + Icons */}
-            <div className="hidden lg:flex items-center gap-3 xl:gap-5">
-              <div className="relative group">
-                <input
-                  type="text"
-                  placeholder="Search designs..."
-                  className="w-36 xl:w-60 pl-10 xl:pl-12 pr-4 py-2 xl:py-3 border-2 border-slate-300 rounded-xl xl:rounded-2xl focus:ring-4 focus:ring-emerald-200 focus:border-emerald-500 bg-white/90 text-sm shadow-lg transition-all duration-300"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <Search className="absolute left-3 xl:left-4 top-2.5 xl:top-3.5 text-slate-400 w-4 h-4 xl:w-5 xl:h-5 group-hover:text-emerald-600 transition-colors" />
-              </div>
-              <button onClick={() => handleNavigation("/cart")}
-                className="relative p-2 xl:p-3 text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all duration-300 shadow-md group">
-                <ShoppingCart className="w-5 h-5 xl:w-6 xl:h-6 group-hover:scale-110 transition-transform" />
+            {/* Desktop right — search + icons */}
+            <div className="hidden lg:flex items-center gap-3">
+              {/* ✅ Bug fix: search is a real <form> with submit handler */}
+              <form onSubmit={handleSearch} role="search" aria-label="Search designs">
+                <div className="relative">
+                  <label htmlFor="desktop-search" className="sr-only">Search architectural designs</label>
+                  <input
+                    id="desktop-search"
+                    type="search"
+                    placeholder="Search designs…"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-40 xl:w-56 pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-300 focus:border-brand-500 bg-white text-sm transition-all duration-200 focus:outline-none"
+                  />
+                  <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4 pointer-events-none" aria-hidden="true" />
+                </div>
+              </form>
+
+              <button
+                onClick={() => navigate("/cart")}
+                aria-label="View shopping cart"
+                className="p-2.5 text-gray-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand-400"
+              >
+                <ShoppingCart className="w-5 h-5 xl:w-6 xl:h-6" aria-hidden="true" />
               </button>
-              <button onClick={() => handleNavigation("/profile")}
-                className="p-2 xl:p-3 text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all duration-300 shadow-md group">
-                <User className="w-5 h-5 xl:w-6 xl:h-6 group-hover:scale-110 transition-transform" />
+
+              <button
+                onClick={() => navigate("/profile")}
+                aria-label="View your profile"
+                className="p-2.5 text-gray-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand-400"
+              >
+                <User className="w-5 h-5 xl:w-6 xl:h-6" aria-hidden="true" />
               </button>
             </div>
 
-            {/* Mobile Controls */}
-            <div className="flex items-center gap-2 lg:hidden">
-              <button onClick={() => handleNavigation("/cart")}
-                className="relative p-2 text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-300">
-                <ShoppingCart className="w-5 h-5" />
+            {/* Mobile controls */}
+            <div className="flex items-center gap-1 lg:hidden">
+              <button
+                onClick={() => navigate("/cart")}
+                aria-label="View shopping cart"
+                className="p-2 text-gray-600 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400"
+              >
+                <ShoppingCart className="w-5 h-5" aria-hidden="true" />
               </button>
-              <button onClick={() => handleNavigation("/profile")}
-                className="p-2 text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-300">
-                <User className="w-5 h-5" />
+              <button
+                onClick={() => navigate("/profile")}
+                aria-label="View your profile"
+                className="p-2 text-gray-600 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400"
+              >
+                <User className="w-5 h-5" aria-hidden="true" />
               </button>
-              <button onClick={() => setShowSearch(!showSearch)}
-                className="p-2 text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-300">
-                <Search className="w-5 h-5" />
+              <button
+                onClick={() => setShowSearch(!showSearch)}
+                aria-label={showSearch ? "Close search" : "Open search"}
+                aria-expanded={showSearch}
+                className="p-2 text-gray-600 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400"
+              >
+                <Search className="w-5 h-5" aria-hidden="true" />
               </button>
-              <button onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="p-2 text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-300">
-                {showMobileMenu ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              <button
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                aria-label={showMobileMenu ? "Close menu" : "Open menu"}
+                aria-expanded={showMobileMenu}
+                aria-controls="mobile-menu"
+                className="p-2 text-gray-600 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400"
+              >
+                {showMobileMenu
+                  ? <X className="w-6 h-6" aria-hidden="true" />
+                  : <Menu className="w-6 h-6" aria-hidden="true" />
+                }
               </button>
             </div>
           </div>
 
-          {/* Mobile Search */}
+          {/* Mobile search bar */}
           {showSearch && (
-            <div className="py-4 lg:hidden border-t border-slate-100">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search architectural designs..."
-                  className="w-full pl-12 pr-20 py-3 border-2 border-emerald-300 rounded-xl focus:ring-4 focus:ring-emerald-200 focus:border-emerald-500 bg-white/95 shadow-lg text-base"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <Search className="absolute left-4 top-3.5 text-emerald-600 w-5 h-5" />
-                <button className="absolute right-2 top-1.5 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700 shadow-lg">
-                  Search
-                </button>
-              </div>
+            <div className="py-3 lg:hidden border-t border-gray-100">
+              <form onSubmit={handleSearch} role="search" aria-label="Search designs">
+                <div className="relative">
+                  <label htmlFor="mobile-search" className="sr-only">Search architectural designs</label>
+                  <input
+                    id="mobile-search"
+                    type="search"
+                    placeholder="Search architectural designs…"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-11 pr-24 py-3 border-2 border-brand-300 rounded-xl focus:ring-2 focus:ring-brand-200 focus:border-brand-500 bg-white text-sm focus:outline-none"
+                    autoFocus
+                  />
+                  <Search className="absolute left-4 top-3.5 text-brand-500 w-4 h-4 pointer-events-none" aria-hidden="true" />
+                  {/* ✅ Bug fix: button now has type="submit" and actually triggers search */}
+                  <button
+                    type="submit"
+                    className="absolute right-2 top-1.5 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-700 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  >
+                    Search
+                  </button>
+                </div>
+              </form>
             </div>
           )}
 
-          {/* Mobile Menu */}
+          {/* Mobile menu */}
           {showMobileMenu && (
-            <div className="lg:hidden bg-white rounded-2xl shadow-2xl my-4 py-6 border border-slate-200/60 max-h-[80vh] overflow-y-auto">
-              <div className="px-6 space-y-1">
+            <nav
+              id="mobile-menu"
+              aria-label="Mobile navigation"
+              className="lg:hidden bg-white rounded-2xl shadow-xl my-3 border border-gray-100 max-h-[80vh] overflow-y-auto"
+            >
+              <div className="px-4 py-4 space-y-1">
+                {/* Primary links */}
                 {[
-                  { href: "/", icon: Home, label: "Home" },
-                  { href: "/custom-design", icon: Building, label: "Custom Design" },
-                  { href: "/bnb", icon: BedDouble, label: "BNB Stays" },
-                ].map(({ href, icon: Icon, label }) => (
-                  <a key={label} href={href}
-                    className="flex items-center gap-4 px-4 py-3 text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all duration-300">
-                    <Icon className="w-5 h-5" />
-                    <span className="font-semibold">{label}</span>
-                  </a>
+                  { to: "/",              Icon: Home,      label: "Home" },
+                  { to: "/custom-design", Icon: Building,  label: "Custom Design" },
+                  { to: "/bnb",           Icon: BedDouble, label: "BNB Stays" },
+                ].map(({ to, Icon, label }) => (
+                  <Link
+                    key={label}
+                    to={to}
+                    onClick={() => setShowMobileMenu(false)}
+                    className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-colors font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                  >
+                    <Icon className="w-5 h-5" aria-hidden="true" />
+                    {label}
+                  </Link>
                 ))}
 
-                {/* Contact Section */}
-                <div className="px-4 py-3 border-t border-slate-100 mt-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Phone className="w-5 h-5 text-emerald-600" />
-                    <h3 className="text-slate-800 font-bold">Contact Us</h3>
+                {/* Contact section */}
+                <div className="border-t border-gray-100 pt-4 mt-2">
+                  <div className="flex items-center gap-2 px-4 mb-2">
+                    <Phone className="w-4 h-4 text-brand-600" aria-hidden="true" />
+                    <h3 className="text-gray-800 font-bold text-sm">Contact Us</h3>
                   </div>
-                  <div className="space-y-2">
-                    <a href="https://wa.me/254763831806?text=Hello%20Hillersons%20Spaces,%20I%20would%20like%20to%20inquire%20about%20your%20services."
-                      target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-emerald-50 rounded-xl transition-all duration-300">
-                      <span className="bg-emerald-600 p-2 rounded-lg">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-5 h-5">
-                          <path d="M20.52 3.48A11.949 11.949 0 0012 0C5.373 0 .001 5.373.001 12c0 2.121.657 4.084 1.779 5.722L0 24l6.378-1.675A11.949 11.949 0 0012 24c6.627 0 12-5.373 12-12 0-3.195-1.246-6.198-3.48-8.52zM12 22c-1.905 0-3.713-.612-5.205-1.654l-.372-.22-3.787.995.997-3.692-.242-.374A9.958 9.958 0 012 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10zm5.338-7.667c-.297-.149-1.758-.867-2.031-.967-.273-.1-.472-.149-.672.15-.198.297-.767.966-.941 1.164-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.447-.52.151-.174.2-.298.3-.497.1-.198.05-.372-.025-.52-.075-.149-.672-1.612-.921-2.206-.242-.579-.487-.5-.672-.51l-.573-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-                        </svg>
-                      </span>
-                      <span className="text-slate-700 font-medium">WhatsApp Us</span>
-                    </a>
-                    <a href="mailto:HillersonsDesigns@gmail.com"
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-emerald-50 rounded-xl transition-all duration-300">
-                      <span className="bg-blue-500 p-2 rounded-lg"><Mail className="w-5 h-5 text-white" /></span>
-                      <span className="text-slate-700 font-medium">Email Us</span>
-                    </a>
-                    <a href="https://www.google.com/maps/place/Rehema+House,+6th+floor+Standard+St,+Nairobi/@-1.2847631,36.8228179,21z"
-                      target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-emerald-50 rounded-xl transition-all duration-300">
-                      <span className="bg-red-500 p-2 rounded-lg"><MapPin className="w-5 h-5 text-white" /></span>
-                      <span className="text-slate-700 font-medium">Our Location</span>
-                    </a>
-                    <a href="tel:+254763831806"
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-emerald-50 rounded-xl transition-all duration-300">
-                      <span className="bg-emerald-600 p-2 rounded-lg"><Phone className="w-5 h-5 text-white" /></span>
-                      <span className="text-slate-700 font-medium">Call Us</span>
-                    </a>
-                    <a href="/contact"
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-emerald-50 rounded-xl transition-all duration-300">
-                      <span className="bg-gray-100 p-2 rounded-lg"><Send className="w-4 h-4 text-gray-600" /></span>
-                      <span className="text-slate-700 font-medium">Contact Page</span>
-                    </a>
-                  </div>
-                </div>
-
-                {/* Services Section */}
-                <div className="px-4 py-3 border-t border-slate-100 mt-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Sparkles className="w-5 h-5 text-emerald-600" />
-                    <h3 className="text-slate-800 font-bold">Our Services</h3>
-                  </div>
-                  <div className="space-y-1">
-                    {[
-                      { href: "/allProducts", icon: Home, label: "Architectural Plans" },
-                      { href: "/categories/commercial projects", icon: Globe, label: "Commercial Projects" },
-                      { href: "/categories/residential projects", icon: Users, label: "Residential Projects" },
-                      { href: "/categories/social amenities projects", icon: Star, label: "Social Amenities" },
-                      { href: "/categories/renovation work", icon: Hammer, label: "Renovation Work" },
-                      { href: "/categories/interior design", icon: Palette, label: "Interior Design" },
-                      { href: "/bnb", icon: BedDouble, label: "BNB Stays" },
-                    ].map(({ href, icon: Icon, label }) => (
-                      <a key={label} href={href}
-                        className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-300">
-                        <Icon className="w-4 h-4" />
-                        <span className="font-medium">{label}</span>
+                  <div className="space-y-0.5">
+                    {CONTACT_LINKS.map(({ href, external, label, iconBg, Icon, iconColor }) => (
+                      <a
+                        key={label}
+                        href={href}
+                        {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                        onClick={() => setShowMobileMenu(false)}
+                        className={navLinkCls + " text-sm"}
+                      >
+                        <span className={`${iconBg} p-2 rounded-lg flex-shrink-0`}>
+                          <Icon className={`w-4 h-4 ${iconColor || "text-white"}`} />
+                        </span>
+                        <span className="text-gray-700 font-medium">{label}</span>
                       </a>
                     ))}
                   </div>
                 </div>
+
+                {/* Services section */}
+                <div className="border-t border-gray-100 pt-4 mt-2">
+                  <div className="flex items-center gap-2 px-4 mb-2">
+                    <Sparkles className="w-4 h-4 text-brand-600" aria-hidden="true" />
+                    <h3 className="text-gray-800 font-bold text-sm">Our Services</h3>
+                  </div>
+                  <div className="space-y-0.5">
+                    {SERVICES.map(({ Icon, label, href, iconBg }) => (
+                      <Link
+                        key={label}
+                        to={href}
+                        onClick={() => setShowMobileMenu(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                      >
+                        <div className={`w-7 h-7 ${iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                          <Icon className="w-3.5 h-3.5 text-white" aria-hidden="true" />
+                        </div>
+                        <span className="font-medium">{label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
+            </nav>
           )}
         </div>
       </header>
 
-      {/* Spacer */}
-      <div className="h-16 lg:h-20" />
+      {/* Spacer — accounts for 4px accent bar + 64px/80px header */}
+      <div className="h-[68px] lg:h-[84px]" aria-hidden="true" />
     </>
   );
 };

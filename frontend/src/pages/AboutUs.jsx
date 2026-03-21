@@ -1,15 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
-  ChevronDown,
-  Award,
-  Globe,
-  Zap,
-  Eye,
-  Target,
-  Lightbulb,
-  Building2,
-  Star,
-  ArrowRight,
+  ChevronDown, Award, Globe, Zap, Eye, Target,
+  Lightbulb, Building2, Star, ArrowRight,
 } from "lucide-react";
 import { useProjects } from "../context/ProjectsContext";
 import Header from "../components/Header";
@@ -17,11 +9,11 @@ import Footer from "../components/Footer";
 
 const AboutUsPage = () => {
   const { projects } = useProjects();
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible]               = useState(false);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
-  const [showSearch, setShowSearch] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showSearch, setShowSearch]             = useState(false);
+  const [searchQuery, setSearchQuery]           = useState("");
+  const [showMobileMenu, setShowMobileMenu]     = useState(false);
 
   useEffect(() => {
     setIsVisible(true);
@@ -32,12 +24,11 @@ const AboutUsPage = () => {
   }, []);
 
   const stats = [
-    { number: "500+", label: "Designs Created", icon: Building2 },
-    { number: "98%", label: "Client Satisfaction", icon: Star },
-    { number: "10+", label: "Years Experience", icon: Award },
-    { number: "30+", label: "Counties Served", icon: Globe },
+    { number: "500+", label: "Designs Created",    icon: Building2 },
+    { number: "98%",  label: "Client Satisfaction", icon: Star },
+    { number: "10+",  label: "Years Experience",    icon: Award },
+    { number: "30+",  label: "Counties Served",     icon: Globe },
   ];
-
 
   const testimonials = [
     {
@@ -58,7 +49,7 @@ const AboutUsPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-emerald-50 to-lime-50">
+    <div className="min-h-screen bg-brand-50">
       <Header
         showSearch={showSearch}
         searchQuery={searchQuery}
@@ -69,23 +60,23 @@ const AboutUsPage = () => {
         projects={projects}
       />
 
-      {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-500 to-lime-500">
-        <div className="absolute inset-0 bg-black/10"></div>
+      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
+      <section className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-brand-800 via-brand-600 to-brand-500">
+        <div className="absolute inset-0 bg-black/10" />
 
-        {/* Animated Background Elements */}
+        {/* Animated background blobs */}
         <div className="absolute inset-0 overflow-hidden">
           {[...Array(6)].map((_, i) => (
             <div
               key={i}
-              className={`absolute w-64 h-64 rounded-full bg-white/5 animate-pulse`}
+              className="absolute w-64 h-64 rounded-full bg-white/5 animate-pulse"
               style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${i * 0.5}s`,
+                left: `${(i * 17 + 5) % 100}%`,
+                top:  `${(i * 23 + 10) % 100}%`,
+                animationDelay:    `${i * 0.5}s`,
                 animationDuration: `${3 + i}s`,
               }}
-            ></div>
+            />
           ))}
         </div>
 
@@ -96,9 +87,7 @@ const AboutUsPage = () => {
         >
           <h1 className="text-4xl sm:text-6xl lg:text-8xl font-black text-white mb-4 sm:mb-6 leading-tight">
             About
-            <span className="block bg-gradient-to-r from-lime-300 to-white bg-clip-text text-transparent">
-              HillersonsDesigns
-            </span>
+            <span className="block text-brand-200">HillersonsDesigns</span>
           </h1>
           <p className="text-lg sm:text-xl lg:text-2xl text-white/90 mb-6 sm:mb-8 max-w-3xl mx-auto px-2">
             Crafting extraordinary living spaces that redefine modern
@@ -110,35 +99,35 @@ const AboutUsPage = () => {
         </div>
       </section>
 
-      {/* Story Section */}
-      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6">
+      {/* ── Story ────────────────────────────────────────────────────────────── */}
+      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
             <div className="space-y-6 sm:space-y-8 order-2 lg:order-1">
-              <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 font-semibold text-sm sm:text-base">
+              <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-brand-100 text-brand-700 font-semibold text-sm sm:text-base">
                 <Lightbulb className="w-3 h-3 sm:w-4 sm:h-4" />
                 Our Story
               </div>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-brand-900 leading-tight">
                 Designing Dreams Since
-                <span className="text-emerald-600"> 2015</span>
+                <span className="text-brand-600"> 2015</span>
               </h2>
-              <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
+              <p className="text-base sm:text-lg text-brand-800 leading-relaxed">
                 What started as a passion project in a small studio has evolved
                 into one of the most innovative architectural design firms
                 globally. We believe every home tells a story, and we're here to
                 help you write yours with extraordinary design that stands the
                 test of time.
               </p>
-              <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
+              <p className="text-base sm:text-lg text-brand-800 leading-relaxed">
                 Our commitment to sustainability, innovation, and client
                 satisfaction has earned us recognition worldwide. From cozy
                 family homes to luxury estates, we craft spaces that don't just
-                shelter—they inspire.
+                shelter — they inspire.
               </p>
             </div>
             <div className="relative order-1 lg:order-2">
-              <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-r from-emerald-400 to-lime-400 rounded-xl sm:rounded-2xl opacity-20 blur-xl"></div>
+              <div className="absolute -inset-2 sm:-inset-4 bg-brand-200 rounded-xl sm:rounded-2xl opacity-30 blur-xl" />
               <img
                 src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=600&h=400&fit=crop"
                 alt="Modern architectural design"
@@ -149,8 +138,8 @@ const AboutUsPage = () => {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-12 sm:py-16 bg-gradient-to-r from-emerald-600 to-lime-600">
+      {/* ── Stats ────────────────────────────────────────────────────────────── */}
+      <section className="py-12 sm:py-16 bg-gradient-to-r from-brand-700 to-brand-600">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {stats.map((stat, index) => (
@@ -170,16 +159,15 @@ const AboutUsPage = () => {
         </div>
       </section>
 
-      {/* Values Section */}
-      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6">
+      {/* ── Values ───────────────────────────────────────────────────────────── */}
+      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-brand-900 mb-4 sm:mb-6">
               Our Core Values
             </h2>
-            <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto px-2">
-              The principles that guide every design decision and client
-              interaction
+            <p className="text-lg sm:text-xl text-brand-700 max-w-3xl mx-auto px-2">
+              The principles that guide every design decision and client interaction
             </p>
           </div>
 
@@ -205,15 +193,15 @@ const AboutUsPage = () => {
               },
             ].map((value, index) => (
               <div key={index} className="group relative">
-                <div className="absolute -inset-1 sm:-inset-2 bg-gradient-to-r from-emerald-400 to-lime-400 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
-                <div className="relative bg-white rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100">
-                  <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-r from-emerald-500 to-lime-500 mb-4 sm:mb-6">
+                <div className="absolute -inset-1 sm:-inset-2 bg-brand-100 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="relative bg-white rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-brand-100">
+                  <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full bg-brand-600 mb-4 sm:mb-6">
                     <value.icon className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-white" />
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">
+                  <h3 className="text-xl sm:text-2xl font-bold text-brand-900 mb-3 sm:mb-4">
                     {value.title}
                   </h3>
-                  <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
+                  <p className="text-brand-700 leading-relaxed text-sm sm:text-base">
                     {value.description}
                   </p>
                 </div>
@@ -223,9 +211,9 @@ const AboutUsPage = () => {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 bg-gradient-to-r from-emerald-600 to-lime-600 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/10"></div>
+      {/* ── Testimonials ─────────────────────────────────────────────────────── */}
+      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 bg-gradient-to-r from-brand-700 to-brand-600 relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/10" />
         <div className="relative z-10 max-w-4xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-12 sm:mb-16">
             What Our Clients Say
@@ -245,12 +233,8 @@ const AboutUsPage = () => {
                   "{testimonial.text}"
                 </blockquote>
                 <div className="text-white">
-                  <div className="font-bold text-lg sm:text-xl">
-                    {testimonial.author}
-                  </div>
-                  <div className="text-white/80 text-sm sm:text-base">
-                    {testimonial.role}
-                  </div>
+                  <div className="font-bold text-lg sm:text-xl">{testimonial.author}</div>
+                  <div className="text-white/80 text-sm sm:text-base">{testimonial.role}</div>
                 </div>
               </div>
             ))}
@@ -270,27 +254,28 @@ const AboutUsPage = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6">
+      {/* ── CTA ──────────────────────────────────────────────────────────────── */}
+      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 bg-white">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-brand-900 mb-4 sm:mb-6">
             Ready to Build Your Dream?
           </h2>
-          <p className="text-lg sm:text-xl text-gray-600 mb-8 sm:mb-12 max-w-2xl mx-auto px-2">
+          <p className="text-lg sm:text-xl text-brand-700 mb-8 sm:mb-12 max-w-2xl mx-auto px-2">
             Let's collaborate to create something extraordinary. Your perfect
             home is just a conversation away.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center px-2">
-            <button className="group bg-gradient-to-r from-emerald-600 to-lime-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full font-bold text-base sm:text-lg hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-2">
+            <button className="group bg-brand-600 hover:bg-brand-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full font-bold text-base sm:text-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl">
               Start Your Project
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform duration-300" />
             </button>
-            <button className="border-2 border-emerald-600 text-emerald-600 px-6 sm:px-8 py-3 sm:py-4 rounded-full font-bold text-base sm:text-lg hover:bg-emerald-600 hover:text-white transition-all duration-300">
+            <button className="border-2 border-brand-600 text-brand-600 px-6 sm:px-8 py-3 sm:py-4 rounded-full font-bold text-base sm:text-lg hover:bg-brand-600 hover:text-white transition-all duration-300">
               View Our Portfolio
             </button>
           </div>
         </div>
       </section>
+
       <Footer />
     </div>
   );

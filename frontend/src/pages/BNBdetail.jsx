@@ -6,9 +6,26 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useProjects } from "../context/ProjectsContext";
 import {
-  MapPin, Users, Bed, Bath, Wifi, Car, Waves, Wind,
-  Coffee, Shield, Star, Heart, Share2, ChevronLeft,
-  ChevronRight, X, Check, AlertCircle, ArrowRight, Clock,
+  MapPin,
+  Users,
+  Bed,
+  Bath,
+  Wifi,
+  Car,
+  Waves,
+  Wind,
+  Coffee,
+  Shield,
+  Star,
+  Heart,
+  Share2,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Check,
+  AlertCircle,
+  ArrowRight,
+  Clock,
   Mail,
 } from "lucide-react";
 
@@ -60,8 +77,7 @@ export default function BNBDetail() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/bnb/${id}`);
       if (!res.ok) throw new Error("Listing not found");
-      const data = await res.json();
-      setListing(data);
+      setListing(await res.json());
     } catch (err) {
       setError(err.message);
     } finally {
@@ -74,10 +90,9 @@ export default function BNBDetail() {
     setCheckingAvailability(true);
     try {
       const res = await fetch(
-        `${API_BASE_URL}/api/bnb/${id}/availability?checkIn=${bookingForm.checkIn}&checkOut=${bookingForm.checkOut}`
+        `${API_BASE_URL}/api/bnb/${id}/availability?checkIn=${bookingForm.checkIn}&checkOut=${bookingForm.checkOut}`,
       );
-      const data = await res.json();
-      setAvailability(data);
+      setAvailability(await res.json());
     } catch (err) {
       console.error("Availability check failed:", err);
     } finally {
@@ -86,9 +101,7 @@ export default function BNBDetail() {
   };
 
   useEffect(() => {
-    if (bookingForm.checkIn && bookingForm.checkOut) {
-      checkAvailability();
-    }
+    if (bookingForm.checkIn && bookingForm.checkOut) checkAvailability();
   }, [bookingForm.checkIn, bookingForm.checkOut]);
 
   const handleBook = async () => {
@@ -96,12 +109,11 @@ export default function BNBDetail() {
       navigate("/login", { state: { from: { pathname: `/bnb/${id}` } } });
       return;
     }
-    if (!bookingForm.checkIn || !bookingForm.checkOut) {
+    if (!bookingForm.checkIn || !bookingForm.checkOut)
       return setBookingError("Please select check-in and check-out dates.");
-    }
-    if (availability && !availability.available) {
+    if (availability && !availability.available)
       return setBookingError("Selected dates are not available.");
-    }
+
     setBookingLoading(true);
     setBookingError("");
     try {
@@ -127,30 +139,33 @@ export default function BNBDetail() {
     bookingForm.checkIn && bookingForm.checkOut
       ? Math.ceil(
           (new Date(bookingForm.checkOut) - new Date(bookingForm.checkIn)) /
-            (1000 * 60 * 60 * 24)
+            (1000 * 60 * 60 * 24),
         )
       : 0;
   const pricePerNight = listing?.bnb?.pricePerNight || listing?.price || 0;
   const serviceFee = nights > 0 ? Math.round(pricePerNight * nights * 0.05) : 0;
   const total = pricePerNight * nights + serviceFee;
 
-  // ── Loading ──────────────────────────────────────────────────────────────────
+  // ── Loading skeleton ────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
         <Header
-          showSearch={showSearch} setShowSearch={setShowSearch}
-          setSearchQuery={setSearchQuery} searchQuery={searchQuery}
-          showMobileMenu={showMobileMenu} setShowMobileMenu={setShowMobileMenu}
+          showSearch={showSearch}
+          setShowSearch={setShowSearch}
+          setSearchQuery={setSearchQuery}
+          searchQuery={searchQuery}
+          showMobileMenu={showMobileMenu}
+          setShowMobileMenu={setShowMobileMenu}
           projects={projects}
         />
         <div className="max-w-6xl mx-auto px-4 py-10 animate-pulse">
-          <div className="h-7 bg-emerald-50 rounded w-1/3 mb-6" />
+          <div className="h-7 bg-brand-50 rounded w-1/3 mb-6" />
           <div className="grid grid-cols-2 gap-3 mb-8">
-            <div className="h-80 bg-emerald-50 rounded-xl" />
+            <div className="h-80 bg-brand-50 rounded-xl" />
             <div className="grid grid-cols-2 gap-3">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-36 bg-emerald-50 rounded-xl" />
+                <div key={i} className="h-36 bg-brand-50 rounded-xl" />
               ))}
             </div>
           </div>
@@ -159,18 +174,21 @@ export default function BNBDetail() {
     );
   }
 
+  // ── Error state ─────────────────────────────────────────────────────────────
   if (error || !listing) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center px-4">
-          <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="w-8 h-8 text-emerald-600" />
+          <div className="w-16 h-16 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-brand-600" />
           </div>
-          <h2 className="text-2xl font-bold text-emerald-900 mb-2">Listing not found</h2>
-          <p className="text-emerald-700 mb-6 text-sm">{error}</p>
+          <h2 className="text-2xl font-bold text-brand-900 mb-2">
+            Listing not found
+          </h2>
+          <p className="text-brand-700 mb-6 text-sm">{error}</p>
           <button
             onClick={() => navigate("/bnb")}
-            className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-emerald-700 transition"
+            className="bg-brand-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-brand-700 transition"
           >
             Browse BNBs
           </button>
@@ -187,24 +205,29 @@ export default function BNBDetail() {
   return (
     <div className="min-h-screen bg-white">
       <Header
-        showSearch={showSearch} setShowSearch={setShowSearch}
-        setSearchQuery={setSearchQuery} searchQuery={searchQuery}
-        showMobileMenu={showMobileMenu} setShowMobileMenu={setShowMobileMenu}
+        showSearch={showSearch}
+        setShowSearch={setShowSearch}
+        setSearchQuery={setSearchQuery}
+        searchQuery={searchQuery}
+        showMobileMenu={showMobileMenu}
+        setShowMobileMenu={setShowMobileMenu}
         projects={projects}
       />
 
-      {/* Fullscreen gallery modal */}
+      {/* ── Fullscreen gallery modal ─────────────────────────────────────────── */}
       {showGallery && (
-        <div className="fixed inset-0 bg-emerald-950 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-brand-900 z-50 flex items-center justify-center">
           <button
             onClick={() => setShowGallery(false)}
-            className="absolute top-4 right-4 text-white hover:text-emerald-300 z-10 transition"
+            className="absolute top-4 right-4 text-white hover:text-brand-300 z-10 transition"
           >
             <X className="w-7 h-7" />
           </button>
           <button
-            onClick={() => setActiveImg((i) => (i - 1 + images.length) % images.length)}
-            className="absolute left-4 text-white hover:text-emerald-300 z-10 transition"
+            onClick={() =>
+              setActiveImg((i) => (i - 1 + images.length) % images.length)
+            }
+            className="absolute left-4 text-white hover:text-brand-300 z-10 transition"
           >
             <ChevronLeft className="w-9 h-9" />
           </button>
@@ -215,22 +238,21 @@ export default function BNBDetail() {
           />
           <button
             onClick={() => setActiveImg((i) => (i + 1) % images.length)}
-            className="absolute right-4 text-white hover:text-emerald-300 z-10 transition"
+            className="absolute right-4 text-white hover:text-brand-300 z-10 transition"
           >
             <ChevronRight className="w-9 h-9" />
           </button>
-          <div className="absolute bottom-4 text-emerald-200 text-sm font-medium tracking-wide">
+          <div className="absolute bottom-4 text-brand-200 text-sm font-medium tracking-wide">
             {activeImg + 1} / {images.length}
           </div>
         </div>
       )}
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* Back button */}
+        {/* Back */}
         <button
           onClick={() => navigate("/bnb")}
-          className="flex items-center gap-1.5 text-emerald-700 hover:text-emerald-900 transition mb-6 text-sm font-medium"
+          className="flex items-center gap-1.5 text-brand-700 hover:text-brand-900 transition mb-6 text-sm font-medium"
         >
           <ChevronLeft className="w-4 h-4" />
           Back to BNBs
@@ -239,18 +261,28 @@ export default function BNBDetail() {
         {/* Title row */}
         <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
           <div>
-            <h1 className="text-3xl font-bold text-emerald-900 mb-2">{listing.title}</h1>
-            <div className="flex items-center gap-4 flex-wrap text-sm text-emerald-700">
+            <h1 className="text-3xl font-bold text-brand-900 mb-2">
+              {listing.title}
+            </h1>
+            <div className="flex items-center gap-4 flex-wrap text-sm text-brand-700">
               {reviews.length > 0 && (
                 <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 text-lime-500 fill-lime-500" />
-                  <span className="font-semibold text-emerald-900">{listing.averageRating}</span>
-                  <span className="text-emerald-600">({reviews.length} reviews)</span>
+                  <Star className="w-4 h-4 text-brand-accent fill-brand-accent" />
+                  <span className="font-semibold text-brand-900">
+                    {listing.averageRating}
+                  </span>
+                  <span className="text-brand-600">
+                    ({reviews.length} reviews)
+                  </span>
                 </div>
               )}
               <div className="flex items-center gap-1">
-                <MapPin className="w-4 h-4 text-emerald-500" />
-                <span>{[listing.town, listing.county, listing.location].filter(Boolean).join(", ")}</span>
+                <MapPin className="w-4 h-4 text-brand-500" />
+                <span>
+                  {[listing.town, listing.county, listing.location]
+                    .filter(Boolean)
+                    .join(", ")}
+                </span>
               </div>
             </div>
           </div>
@@ -259,14 +291,16 @@ export default function BNBDetail() {
               onClick={() => setLiked(!liked)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 text-sm font-medium transition ${
                 liked
-                  ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                  : "border-emerald-200 text-emerald-600 hover:border-emerald-400"
+                  ? "border-brand-500 bg-brand-50 text-brand-700"
+                  : "border-brand-200 text-brand-600 hover:border-brand-400"
               }`}
             >
-              <Heart className={`w-4 h-4 ${liked ? "fill-emerald-500 text-emerald-500" : ""}`} />
+              <Heart
+                className={`w-4 h-4 ${liked ? "fill-brand-500 text-brand-500" : ""}`}
+              />
               Save
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-emerald-200 text-sm font-medium text-emerald-600 hover:border-emerald-400 transition">
+            <button className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-brand-200 text-sm font-medium text-brand-600 hover:border-brand-400 transition">
               <Share2 className="w-4 h-4" />
               Share
             </button>
@@ -294,7 +328,7 @@ export default function BNBDetail() {
                   className="w-full h-44 object-cover hover:brightness-95 transition"
                 />
                 {i === 3 && images.length > 5 && (
-                  <div className="absolute inset-0 bg-emerald-900/50 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-brand-900/50 flex items-center justify-center">
                     <span className="text-white font-semibold text-base">
                       +{images.length - 5} more
                     </span>
@@ -304,40 +338,44 @@ export default function BNBDetail() {
             ))}
           </div>
         ) : (
-          <div className="h-72 bg-emerald-50 rounded-2xl flex items-center justify-center mb-10 border border-emerald-100">
-            <p className="text-emerald-300 text-base">No photos available</p>
+          <div className="h-72 bg-brand-50 rounded-2xl flex items-center justify-center mb-10 border border-brand-100">
+            <p className="text-brand-300 text-base">No photos available</p>
           </div>
         )}
 
         {/* Main content + booking sidebar */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-
-          {/* Left — listing details */}
+          {/* ── Left: listing details ──────────────────────────────────────── */}
           <div className="lg:col-span-2 space-y-8">
-
             {/* Quick stats */}
-            <div className="flex items-center gap-6 flex-wrap text-sm text-emerald-700 pb-6 border-b border-emerald-100">
+            <div className="flex items-center gap-6 flex-wrap text-sm text-brand-700 pb-6 border-b border-brand-100">
               {listing.bnb?.bedrooms && (
                 <div className="flex items-center gap-2">
-                  <Bed className="w-5 h-5 text-emerald-500" />
-                  <span>{listing.bnb.bedrooms} bedroom{listing.bnb.bedrooms > 1 ? "s" : ""}</span>
+                  <Bed className="w-5 h-5 text-brand-500" />
+                  <span>
+                    {listing.bnb.bedrooms} bedroom
+                    {listing.bnb.bedrooms > 1 ? "s" : ""}
+                  </span>
                 </div>
               )}
               {listing.bnb?.bathrooms && (
                 <div className="flex items-center gap-2">
-                  <Bath className="w-5 h-5 text-emerald-500" />
-                  <span>{listing.bnb.bathrooms} bathroom{listing.bnb.bathrooms > 1 ? "s" : ""}</span>
+                  <Bath className="w-5 h-5 text-brand-500" />
+                  <span>
+                    {listing.bnb.bathrooms} bathroom
+                    {listing.bnb.bathrooms > 1 ? "s" : ""}
+                  </span>
                 </div>
               )}
               {listing.bnb?.maxGuests && (
                 <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-emerald-500" />
+                  <Users className="w-5 h-5 text-brand-500" />
                   <span>Up to {listing.bnb.maxGuests} guests</span>
                 </div>
               )}
               {listing.bnb?.minimumStay && listing.bnb.minimumStay > 1 && (
                 <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-emerald-500" />
+                  <Clock className="w-5 h-5 text-brand-500" />
                   <span>Min. {listing.bnb.minimumStay} nights</span>
                 </div>
               )}
@@ -345,31 +383,32 @@ export default function BNBDetail() {
 
             {/* Host info */}
             {listing.sellerId && (
-              <div className="flex items-center gap-4 pb-6 border-b border-emerald-100">
+              <div className="flex items-center gap-4 pb-6 border-b border-brand-100">
                 <img
                   src={
                     listing.sellerId.profilePicture ||
                     `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                      listing.sellerId.name || "Host"
-                    )}&background=10b981&color=fff&size=64`
+                      listing.sellerId.name || "Host",
+                    )}&background=059669&color=fff&size=64`
                   }
                   alt="Host"
-                  className="w-14 h-14 rounded-full object-cover border-2 border-emerald-200"
+                  className="w-14 h-14 rounded-full object-cover border-2 border-brand-200"
                 />
                 <div>
-                  <p className="font-semibold text-emerald-900">
+                  <p className="font-semibold text-brand-900">
                     Hosted by{" "}
-                    {listing.sellerId.vendorProfile?.businessName || listing.sellerId.name}
+                    {listing.sellerId.vendorProfile?.businessName ||
+                      listing.sellerId.name}
                   </p>
                   {listing.sellerId.vendorProfile?.location && (
-                    <p className="text-sm text-emerald-600 mt-0.5">
+                    <p className="text-sm text-brand-600 mt-0.5">
                       {listing.sellerId.vendorProfile.location}
                     </p>
                   )}
                   {listing.sellerId.email && (
                     <a
                       href={`mailto:${listing.sellerId.email}`}
-                      className="text-xs text-emerald-600 hover:text-emerald-800 underline flex items-center gap-1 mt-1 transition"
+                      className="text-xs text-brand-600 hover:text-brand-800 underline flex items-center gap-1 mt-1 transition"
                     >
                       <Mail className="w-3 h-3" /> Email host
                     </a>
@@ -379,17 +418,21 @@ export default function BNBDetail() {
             )}
 
             {/* Description */}
-            <div className="pb-6 border-b border-emerald-100">
-              <h2 className="text-lg font-bold text-emerald-900 mb-3">About this place</h2>
-              <p className="text-emerald-800 leading-relaxed whitespace-pre-line text-sm">
+            <div className="pb-6 border-b border-brand-100">
+              <h2 className="text-lg font-bold text-brand-900 mb-3">
+                About this place
+              </h2>
+              <p className="text-brand-800 leading-relaxed whitespace-pre-line text-sm">
                 {listing.description}
               </p>
             </div>
 
             {/* Amenities */}
             {amenities.length > 0 && (
-              <div className="pb-6 border-b border-emerald-100">
-                <h2 className="text-lg font-bold text-emerald-900 mb-4">What this place offers</h2>
+              <div className="pb-6 border-b border-brand-100">
+                <h2 className="text-lg font-bold text-brand-900 mb-4">
+                  What this place offers
+                </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {amenities.map((amenity) => {
                     const config = AMENITY_ICONS[amenity.toLowerCase()];
@@ -397,13 +440,14 @@ export default function BNBDetail() {
                     return (
                       <div
                         key={amenity}
-                        className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-100 rounded-xl"
+                        className="flex items-center gap-3 p-3 bg-brand-50 border border-brand-100 rounded-xl"
                       >
-                        {Icon
-                          ? <Icon className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                          : <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                        }
-                        <span className="text-sm text-emerald-800 font-medium">
+                        {Icon ? (
+                          <Icon className="w-4 h-4 text-brand-600 flex-shrink-0" />
+                        ) : (
+                          <Check className="w-4 h-4 text-brand-600 flex-shrink-0" />
+                        )}
+                        <span className="text-sm text-brand-800 font-medium">
                           {config?.label || amenity}
                         </span>
                       </div>
@@ -415,23 +459,29 @@ export default function BNBDetail() {
 
             {/* Check-in / Check-out times */}
             {(listing.bnb?.checkInTime || listing.bnb?.checkOutTime) && (
-              <div className="pb-6 border-b border-emerald-100">
-                <h2 className="text-lg font-bold text-emerald-900 mb-4">Check-in / Check-out</h2>
+              <div className="pb-6 border-b border-brand-100">
+                <h2 className="text-lg font-bold text-brand-900 mb-4">
+                  Check-in / Check-out
+                </h2>
                 <div className="grid grid-cols-2 gap-4">
                   {listing.bnb.checkInTime && (
-                    <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
-                      <p className="text-xs text-emerald-600 uppercase font-semibold mb-1 tracking-wide">
+                    <div className="bg-brand-50 border border-brand-100 rounded-xl p-4">
+                      <p className="text-xs text-brand-600 uppercase font-semibold mb-1 tracking-wide">
                         Check-in after
                       </p>
-                      <p className="text-xl font-bold text-emerald-900">{listing.bnb.checkInTime}</p>
+                      <p className="text-xl font-bold text-brand-900">
+                        {listing.bnb.checkInTime}
+                      </p>
                     </div>
                   )}
                   {listing.bnb.checkOutTime && (
-                    <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
-                      <p className="text-xs text-emerald-600 uppercase font-semibold mb-1 tracking-wide">
+                    <div className="bg-brand-50 border border-brand-100 rounded-xl p-4">
+                      <p className="text-xs text-brand-600 uppercase font-semibold mb-1 tracking-wide">
                         Check-out before
                       </p>
-                      <p className="text-xl font-bold text-emerald-900">{listing.bnb.checkOutTime}</p>
+                      <p className="text-xl font-bold text-brand-900">
+                        {listing.bnb.checkOutTime}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -440,12 +490,17 @@ export default function BNBDetail() {
 
             {/* House rules */}
             {rules.length > 0 && (
-              <div className="pb-6 border-b border-emerald-100">
-                <h2 className="text-lg font-bold text-emerald-900 mb-4">House rules</h2>
+              <div className="pb-6 border-b border-brand-100">
+                <h2 className="text-lg font-bold text-brand-900 mb-4">
+                  House rules
+                </h2>
                 <div className="space-y-2">
                   {rules.map((rule, i) => (
-                    <div key={i} className="flex items-center gap-3 text-sm text-emerald-800">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 text-sm text-brand-800"
+                    >
+                      <div className="w-1.5 h-1.5 rounded-full bg-brand-500 flex-shrink-0" />
                       {rule}
                     </div>
                   ))}
@@ -457,20 +512,21 @@ export default function BNBDetail() {
             {reviews.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-6">
-                  <Star className="w-5 h-5 text-lime-500 fill-lime-500" />
-                  <h2 className="text-lg font-bold text-emerald-900">
-                    {listing.averageRating} · {reviews.length} review{reviews.length > 1 ? "s" : ""}
+                  <Star className="w-5 h-5 text-brand-accent fill-brand-accent" />
+                  <h2 className="text-lg font-bold text-brand-900">
+                    {listing.averageRating} · {reviews.length} review
+                    {reviews.length > 1 ? "s" : ""}
                   </h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {reviews.slice(0, 4).map((review, i) => (
                     <div key={i} className="space-y-2">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm border border-emerald-200">
+                        <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-sm border border-brand-200">
                           {review.userName?.[0] || "G"}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-emerald-900">
+                          <p className="text-sm font-semibold text-brand-900">
                             {review.userName || "Guest"}
                           </p>
                           <div className="flex gap-0.5 mt-0.5">
@@ -479,15 +535,17 @@ export default function BNBDetail() {
                                 key={s}
                                 className={`w-3 h-3 ${
                                   s < review.rating
-                                    ? "text-lime-500 fill-lime-500"
-                                    : "text-emerald-100"
+                                    ? "text-brand-accent fill-brand-accent"
+                                    : "text-brand-100"
                                 }`}
                               />
                             ))}
                           </div>
                         </div>
                       </div>
-                      <p className="text-sm text-emerald-700 leading-relaxed">{review.comment}</p>
+                      <p className="text-sm text-brand-700 leading-relaxed">
+                        {review.comment}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -495,9 +553,9 @@ export default function BNBDetail() {
             )}
           </div>
 
-          {/* Right — Booking card */}
+          {/* ── Right: Booking card ────────────────────────────────────────── */}
           <div className="lg:col-span-1">
-            <div className="sticky top-6 bg-white rounded-2xl shadow-lg border border-emerald-100 p-6">
+            <div className="sticky top-6 bg-white rounded-2xl shadow-lg border border-brand-100 p-6">
               {bookingSuccess ? (
                 <BookingSuccess
                   booking={bookingSuccess}
@@ -506,18 +564,18 @@ export default function BNBDetail() {
               ) : (
                 <>
                   {/* Price */}
-                  <div className="flex items-end gap-2 mb-6 pb-4 border-b border-emerald-100">
-                    <span className="text-3xl font-bold text-emerald-900">
+                  <div className="flex items-end gap-2 mb-6 pb-4 border-b border-brand-100">
+                    <span className="text-3xl font-bold text-brand-900">
                       KES {pricePerNight.toLocaleString()}
                     </span>
-                    <span className="text-emerald-500 text-sm mb-1">/ night</span>
+                    <span className="text-brand-500 text-sm mb-1">/ night</span>
                   </div>
 
                   {/* Date + guests picker */}
-                  <div className="border-2 border-emerald-200 rounded-xl overflow-hidden mb-4 focus-within:border-emerald-500 transition">
-                    <div className="grid grid-cols-2 divide-x divide-emerald-200">
+                  <div className="border-2 border-brand-200 rounded-xl overflow-hidden mb-4 focus-within:border-brand-500 transition">
+                    <div className="grid grid-cols-2 divide-x divide-brand-200">
                       <div className="p-3">
-                        <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">
+                        <p className="text-xs font-bold text-brand-600 uppercase tracking-wide mb-1">
                           Check-in
                         </p>
                         <input
@@ -525,42 +583,57 @@ export default function BNBDetail() {
                           value={bookingForm.checkIn}
                           min={new Date().toISOString().split("T")[0]}
                           onChange={(e) =>
-                            setBookingForm((f) => ({ ...f, checkIn: e.target.value, checkOut: "" }))
+                            setBookingForm((f) => ({
+                              ...f,
+                              checkIn: e.target.value,
+                              checkOut: "",
+                            }))
                           }
-                          className="w-full text-sm text-emerald-900 outline-none bg-transparent"
+                          className="w-full text-sm text-brand-900 outline-none bg-transparent"
                         />
                       </div>
                       <div className="p-3">
-                        <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">
+                        <p className="text-xs font-bold text-brand-600 uppercase tracking-wide mb-1">
                           Check-out
                         </p>
                         <input
                           type="date"
                           value={bookingForm.checkOut}
-                          min={bookingForm.checkIn || new Date().toISOString().split("T")[0]}
-                          onChange={(e) =>
-                            setBookingForm((f) => ({ ...f, checkOut: e.target.value }))
+                          min={
+                            bookingForm.checkIn ||
+                            new Date().toISOString().split("T")[0]
                           }
-                          className="w-full text-sm text-emerald-900 outline-none bg-transparent"
+                          onChange={(e) =>
+                            setBookingForm((f) => ({
+                              ...f,
+                              checkOut: e.target.value,
+                            }))
+                          }
+                          className="w-full text-sm text-brand-900 outline-none bg-transparent"
                         />
                       </div>
                     </div>
-                    <div className="border-t border-emerald-200 p-3">
-                      <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1">
+                    <div className="border-t border-brand-200 p-3">
+                      <p className="text-xs font-bold text-brand-600 uppercase tracking-wide mb-1">
                         Guests
                       </p>
                       <select
                         value={bookingForm.guests}
                         onChange={(e) =>
-                          setBookingForm((f) => ({ ...f, guests: Number(e.target.value) }))
+                          setBookingForm((f) => ({
+                            ...f,
+                            guests: Number(e.target.value),
+                          }))
                         }
-                        className="w-full text-sm text-emerald-900 outline-none bg-transparent"
+                        className="w-full text-sm text-brand-900 outline-none bg-transparent"
                       >
-                        {[...Array(listing.bnb?.maxGuests || 10)].map((_, i) => (
-                          <option key={i + 1} value={i + 1}>
-                            {i + 1} guest{i > 0 ? "s" : ""}
-                          </option>
-                        ))}
+                        {[...Array(listing.bnb?.maxGuests || 10)].map(
+                          (_, i) => (
+                            <option key={i + 1} value={i + 1}>
+                              {i + 1} guest{i > 0 ? "s" : ""}
+                            </option>
+                          ),
+                        )}
                       </select>
                     </div>
                   </div>
@@ -570,25 +643,25 @@ export default function BNBDetail() {
                     <div
                       className={`flex items-center gap-2 p-3 rounded-xl mb-4 text-sm font-medium ${
                         checkingAvailability
-                          ? "bg-emerald-50 text-emerald-600"
+                          ? "bg-brand-50 text-brand-600"
                           : availability?.available
-                          ? "bg-lime-50 text-lime-700 border border-lime-200"
-                          : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            ? "bg-brand-50 text-brand-700 border border-brand-200"
+                            : "bg-brand-100 text-brand-800 border border-brand-300"
                       }`}
                     >
                       {checkingAvailability ? (
                         <>
-                          <div className="w-4 h-4 border-2 border-emerald-300 border-t-emerald-600 rounded-full animate-spin" />
+                          <div className="w-4 h-4 border-2 border-brand-300 border-t-brand-600 rounded-full animate-spin" />
                           Checking availability...
                         </>
                       ) : availability?.available ? (
                         <>
-                          <Check className="w-4 h-4 text-lime-600" />
+                          <Check className="w-4 h-4 text-brand-600" />
                           Available for selected dates
                         </>
                       ) : (
                         <>
-                          <X className="w-4 h-4 text-emerald-600" />
+                          <X className="w-4 h-4 text-brand-700" />
                           Not available for these dates
                         </>
                       )}
@@ -601,9 +674,12 @@ export default function BNBDetail() {
                     placeholder="Your phone number (M-Pesa)"
                     value={bookingForm.guestPhone}
                     onChange={(e) =>
-                      setBookingForm((f) => ({ ...f, guestPhone: e.target.value }))
+                      setBookingForm((f) => ({
+                        ...f,
+                        guestPhone: e.target.value,
+                      }))
                     }
-                    className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl text-sm text-emerald-900 placeholder-emerald-400 focus:outline-none focus:border-emerald-500 mb-3 transition"
+                    className="w-full px-4 py-3 border-2 border-brand-200 rounded-xl text-sm text-brand-900 placeholder-brand-400 focus:outline-none focus:border-brand-500 mb-3 transition"
                   />
 
                   {/* Special requests */}
@@ -611,26 +687,32 @@ export default function BNBDetail() {
                     placeholder="Special requests (optional)"
                     value={bookingForm.specialRequests}
                     onChange={(e) =>
-                      setBookingForm((f) => ({ ...f, specialRequests: e.target.value }))
+                      setBookingForm((f) => ({
+                        ...f,
+                        specialRequests: e.target.value,
+                      }))
                     }
                     rows={2}
-                    className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl text-sm text-emerald-900 placeholder-emerald-400 focus:outline-none focus:border-emerald-500 resize-none mb-4 transition"
+                    className="w-full px-4 py-3 border-2 border-brand-200 rounded-xl text-sm text-brand-900 placeholder-brand-400 focus:outline-none focus:border-brand-500 resize-none mb-4 transition"
                   />
 
                   {/* Price breakdown */}
                   {nights > 0 && (
-                    <div className="space-y-2 mb-4 pb-4 border-b border-emerald-100">
-                      <div className="flex justify-between text-sm text-emerald-700">
+                    <div className="space-y-2 mb-4 pb-4 border-b border-brand-100">
+                      <div className="flex justify-between text-sm text-brand-700">
                         <span>
-                          KES {pricePerNight.toLocaleString()} × {nights} night{nights > 1 ? "s" : ""}
+                          KES {pricePerNight.toLocaleString()} × {nights} night
+                          {nights > 1 ? "s" : ""}
                         </span>
-                        <span>KES {(pricePerNight * nights).toLocaleString()}</span>
+                        <span>
+                          KES {(pricePerNight * nights).toLocaleString()}
+                        </span>
                       </div>
-                      <div className="flex justify-between text-sm text-emerald-700">
+                      <div className="flex justify-between text-sm text-brand-700">
                         <span>Service fee (5%)</span>
                         <span>KES {serviceFee.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between font-bold text-emerald-900 pt-2 text-base">
+                      <div className="flex justify-between font-bold text-brand-900 pt-2 text-base">
                         <span>Total</span>
                         <span>KES {total.toLocaleString()}</span>
                       </div>
@@ -639,38 +721,42 @@ export default function BNBDetail() {
 
                   {/* Error */}
                   {bookingError && (
-                    <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm mb-4">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0 text-emerald-600" />
+                    <div className="flex items-center gap-2 p-3 bg-brand-50 border border-brand-200 rounded-xl text-brand-800 text-sm mb-4">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0 text-brand-600" />
                       {bookingError}
                     </div>
                   )}
 
-                  {/* ── Book button — FIXED ternary ─────────────────────── */}
+                  {/* Book button — fixed ternary */}
                   <button
                     onClick={handleBook}
-                    disabled={bookingLoading || (availability && !availability.available)}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white py-4 rounded-xl font-bold transition flex items-center justify-center gap-2 text-sm"
+                    disabled={
+                      bookingLoading ||
+                      (availability && !availability.available)
+                    }
+                    className="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-brand-300 text-white py-4 rounded-xl font-bold transition flex items-center justify-center gap-2 text-sm"
                   >
                     {bookingLoading ? (
                       <>
                         <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                         Processing...
                       </>
-                    ) : !user ? (
+                    ) : user ? (
                       <>
-                        Sign in to Book
+                        Reserve Now
                         <ArrowRight className="w-4 h-4" />
                       </>
                     ) : (
                       <>
-                        Reserve Now
+                        Sign in to Book
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}
                   </button>
 
-                  <p className="text-center text-xs text-emerald-500 mt-3">
-                    You won't be charged yet — payment is collected after host confirms
+                  <p className="text-center text-xs text-brand-500 mt-3">
+                    You won't be charged yet — payment is collected after host
+                    confirms
                   </p>
                 </>
               )}
@@ -684,42 +770,47 @@ export default function BNBDetail() {
   );
 }
 
-// ── Booking success screen ─────────────────────────────────────────────────────
+// ── Booking success screen ──────────────────────────────────────────────────────
 function BookingSuccess({ booking, onViewBookings }) {
   return (
     <div className="text-center py-4">
-      <div className="w-16 h-16 bg-emerald-100 border border-emerald-200 rounded-full flex items-center justify-center mx-auto mb-4">
-        <Check className="w-8 h-8 text-emerald-600" />
+      <div className="w-16 h-16 bg-brand-100 border border-brand-200 rounded-full flex items-center justify-center mx-auto mb-4">
+        <Check className="w-8 h-8 text-brand-600" />
       </div>
-      <h3 className="text-xl font-bold text-emerald-900 mb-2">Booking Requested</h3>
-      <p className="text-sm text-emerald-600 mb-5">
-        Your booking is pending host confirmation. You'll be notified once confirmed.
+      <h3 className="text-xl font-bold text-brand-900 mb-2">
+        Booking Requested
+      </h3>
+      <p className="text-sm text-brand-600 mb-5">
+        Your booking is pending host confirmation. You'll be notified once
+        confirmed.
       </p>
-      <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-left space-y-2 mb-5 text-sm">
+      <div className="bg-brand-50 border border-brand-100 rounded-xl p-4 text-left space-y-2 mb-5 text-sm">
         <div className="flex justify-between">
-          <span className="text-emerald-600">Check-in</span>
-          <span className="font-medium text-emerald-900">
+          <span className="text-brand-600">Check-in</span>
+          <span className="font-medium text-brand-900">
             {new Date(booking.checkIn).toLocaleDateString()}
           </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-emerald-600">Check-out</span>
-          <span className="font-medium text-emerald-900">
+          <span className="text-brand-600">Check-out</span>
+          <span className="font-medium text-brand-900">
             {new Date(booking.checkOut).toLocaleDateString()}
           </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-emerald-600">Nights</span>
-          <span className="font-medium text-emerald-900">{booking.nights}</span>
+          <span className="text-brand-600">Nights</span>
+          <span className="font-medium text-brand-900">{booking.nights}</span>
         </div>
-        <div className="flex justify-between font-bold border-t border-emerald-100 pt-2">
-          <span className="text-emerald-800">Total</span>
-          <span className="text-emerald-700">KES {booking.totalAmount.toLocaleString()}</span>
+        <div className="flex justify-between font-bold border-t border-brand-100 pt-2">
+          <span className="text-brand-800">Total</span>
+          <span className="text-brand-700">
+            KES {booking.totalAmount.toLocaleString()}
+          </span>
         </div>
       </div>
       <button
         onClick={onViewBookings}
-        className="w-full bg-emerald-600 text-white py-3 rounded-xl font-semibold hover:bg-emerald-700 transition text-sm"
+        className="w-full bg-brand-600 text-white py-3 rounded-xl font-semibold hover:bg-brand-700 transition text-sm"
       >
         View My Bookings
       </button>

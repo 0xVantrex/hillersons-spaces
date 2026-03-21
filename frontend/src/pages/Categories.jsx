@@ -8,13 +8,12 @@ import Footer from "../components/Footer";
 
 const Categories = () => {
   const { projects } = useProjects();
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const [showSearch, setShowSearch] = useState(false);
+  const [categories, setCategories]     = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState(null);
+  const [showSearch, setShowSearch]     = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery]   = useState("");
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -31,13 +30,24 @@ const Categories = () => {
     fetchCategories();
   }, []);
 
-  if (loading)
-    return <div className="text-center p-12">Loading categories...</div>;
-  if (error)
-    return <div className="text-center text-red-600 p-12">{error}</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-brand-50 flex items-center justify-center">
+        <div className="text-brand-600 font-medium animate-pulse">Loading categories...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-brand-50 flex items-center justify-center">
+        <div className="text-brand-800 font-medium">{error}</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white min-h-screen px-6 py-12 max-w-7xl mx-auto">
+    <div className="bg-brand-50 min-h-screen">
       <Header
         showSearch={showSearch}
         setShowSearch={setShowSearch}
@@ -48,57 +58,66 @@ const Categories = () => {
         projects={projects}
       />
 
-      <h1 className="text-4xl font-extrabold text-emerald-700 text-center mb-4">
-        Explore Our Project Categories
-      </h1>
-      <p className="text-lg text-lime-600 text-center max-w-2xl mx-auto mb-12">
-        Explore Hillersons Investment Company's portfolio of commercial,
-        residential, and social amenity projects across Kenya.
-      </p>
-
-      {categories.map((category) => (
-        <div key={category._id} className="mb-16">
-          <h2 className="text-2xl font-semibold text-lime-600 border-b-4 border-emerald-500 inline-block pb-1 mb-6">
-            {category._id}
-          </h2>
-
-          {(category.subcategories || []).length === 0 ? (
-            <div className="text-gray-500 italic">
-              No subcategories available
-            </div>
-          ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {category.subcategories.map((sub) => (
-                <Link
-                  key={sub.name}
-                  to={`/categories/${encodeURIComponent(category._id)}/${encodeURIComponent(sub.name)}`}
-                  className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transform hover:-translate-y-1 transition duration-300 border border-lime-100"
-                >
-                  <div
-                    className="h-48 bg-cover bg-center relative"
-                    style={{
-                      backgroundImage: `url(${sub.image?.[0] || "/images/placeholder.jpg"})`,
-                    }}
-                  >
-                    <span className="absolute top-3 right-3 bg-emerald-600 text-white text-sm font-semibold rounded-full px-3 py-1 shadow">
-                      {sub.count || 0} plans
-                    </span>
-                  </div>
-
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold text-emerald-800 mb-1">
-                      {sub.name}
-                    </h3>
-                    <p className="text-sm text-emerald-600">
-                      Explore {sub.count || 0} professionally designed {sub.name.toLowerCase()}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Page heading */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-extrabold text-brand-800 mb-4">
+            Explore Our Project Categories
+          </h1>
+          <p className="text-lg text-brand-600 max-w-2xl mx-auto">
+            Explore Hillersons Investment Company's portfolio of commercial,
+            residential, and social amenity projects across Kenya.
+          </p>
         </div>
-      ))}
+
+        {/* Category sections */}
+        {categories.map((category) => (
+          <div key={category._id} className="mb-16">
+            <h2 className="text-2xl font-semibold text-brand-700 border-b-4 border-brand-500 inline-block pb-1 mb-6">
+              {category._id}
+            </h2>
+
+            {(category.subcategories || []).length === 0 ? (
+              <div className="text-brand-400 italic text-sm">
+                No subcategories available
+              </div>
+            ) : (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {category.subcategories.map((sub) => (
+                  <Link
+                    key={sub.name}
+                    to={`/categories/${encodeURIComponent(category._id)}/${encodeURIComponent(sub.name)}`}
+                    className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl border border-brand-100 transform hover:-translate-y-1 transition duration-300 group"
+                  >
+                    {/* Image */}
+                    <div
+                      className="h-48 bg-cover bg-center relative"
+                      style={{
+                        backgroundImage: `url(${sub.image?.[0] || "/images/placeholder.jpg"})`,
+                      }}
+                    >
+                      <span className="absolute top-3 right-3 bg-brand-600 text-white text-xs font-semibold rounded-full px-3 py-1 shadow">
+                        {sub.count || 0} plans
+                      </span>
+                    </div>
+
+                    {/* Card body */}
+                    <div className="p-4">
+                      <h3 className="text-base font-semibold text-brand-900 mb-1 group-hover:text-brand-600 transition-colors">
+                        {sub.name}
+                      </h3>
+                      <p className="text-sm text-brand-600">
+                        Explore {sub.count || 0} professionally designed{" "}
+                        {sub.name.toLowerCase()}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
 
       <Footer />
     </div>
