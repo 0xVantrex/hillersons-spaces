@@ -44,6 +44,8 @@ app.use("/api/favorites", require("./routes/favoriteRoutes"));
 app.use("/api/custom-requests", require("./routes/customRequests"));
 app.use("/api/categories", require("./routes/category"));
 app.use("/api/projects", require("./routes/projects"));
+app.use("/api/listings", require("./routes/listings"));
+app.use("/api/vendor", require("./routes/vendor"));
 
 // Test route
 app.get("/", (req, res) => {
