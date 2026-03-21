@@ -78,7 +78,7 @@ function App() {
       <Route path="/vendor/apply" element={<RequireAuth><VendorApply /></RequireAuth>} />
 
       {/* Approved vendor only */}
-      <Route path="/vendor/dashboard" element={<RequireVendor><vendorDashboard /></RequireVendor>} />
+      <Route path="/vendor/dashboard" element={<RequireVendor><VendorDashboard /></RequireVendor>} />
 
       {/* Admin only */}
       <Route path="/admin/dashboard" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
