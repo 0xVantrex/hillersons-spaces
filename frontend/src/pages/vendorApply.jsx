@@ -63,8 +63,10 @@ export default function VendorApply() {
 
   const handleSubmit = async () => {
     if (!form.role) return setError("Please select a vendor type.");
-    if (!form.businessName.trim()) return setError("Business name is required.");
-    if (!form.businessDescription.trim()) return setError("Please describe your business.");
+    if (!form.businessName.trim())
+      return setError("Business name is required.");
+    if (!form.businessDescription.trim())
+      return setError("Please describe your business.");
     if (!form.location.trim()) return setError("Location is required.");
 
     setLoading(true);
@@ -98,8 +100,8 @@ export default function VendorApply() {
         icon={<Clock className="w-16 h-16 text-amber-500" />}
         color="amber"
         title="Application Under Review"
-        message="Your vendor application has been submitted and is being reviewed by the Hillersons team. This usually takes 1–2 business days."
-        tip="You'll receive an email once your application is approved."
+        message="Your vendor application has been submitted and is being reviewed by the Hillersons team. This usually takes 1-2 business days."
+        tip="You will receive an email once your application is approved."
       />
     );
   }
@@ -152,7 +154,7 @@ export default function VendorApply() {
         icon={<CheckCircle2 className="w-16 h-16 text-emerald-500" />}
         color="emerald"
         title="Application Submitted!"
-        message="Thank you! Your vendor application has been received. The Hillersons team will review it within 1–2 business days."
+        message="Thank you! Your vendor application has been received. The Hillersons team will review it within 1-2 business days."
         tip="You'll get an email notification once approved."
         action={
           <button
@@ -250,7 +252,8 @@ export default function VendorApply() {
 
               <button
                 onClick={() => {
-                  if (!form.role) return setError("Please select a vendor type.");
+                  if (!form.role)
+                    return setError("Please select a vendor type.");
                   setError("");
                   setStep(2);
                 }}
@@ -359,7 +362,10 @@ export default function VendorApply() {
 
         <p className="text-center text-sm text-gray-400 mt-6">
           Already a vendor?{" "}
-          <Link to="/vendor/dashboard" className="text-emerald-600 hover:underline font-medium">
+          <Link
+            to="/vendor/dashboard"
+            className="text-emerald-600 hover:underline font-medium"
+          >
             Go to dashboard
           </Link>
         </p>
@@ -369,7 +375,15 @@ export default function VendorApply() {
 }
 
 // ── Reusable form field ────────────────────────────────────────────────────────
-function FormField({ icon: Icon, label, name, value, onChange, placeholder, required }) {
+function FormField({
+  icon: Icon,
+  label,
+  name,
+  value,
+  onChange,
+  placeholder,
+  required,
+}) {
   return (
     <div>
       <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -392,15 +406,18 @@ function FormField({ icon: Icon, label, name, value, onChange, placeholder, requ
 // ── Status screen ──────────────────────────────────────────────────────────────
 function StatusScreen({ icon, color, title, message, tip, action }) {
   const navigate = useNavigate();
-  const borderColor = {
-    amber: "border-amber-200 bg-amber-50",
-    red: "border-red-200 bg-red-50",
-    emerald: "border-emerald-200 bg-emerald-50",
-  }[color] || "border-gray-200 bg-gray-50";
+  const borderColor =
+    {
+      amber: "border-amber-200 bg-amber-50",
+      red: "border-red-200 bg-red-50",
+      emerald: "border-emerald-200 bg-emerald-50",
+    }[color] || "border-gray-200 bg-gray-50";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-lime-50 flex items-center justify-center p-4">
-      <div className={`max-w-md w-full text-center border-2 ${borderColor} rounded-3xl p-10 shadow-xl`}>
+      <div
+        className={`max-w-md w-full text-center border-2 ${borderColor} rounded-3xl p-10 shadow-xl`}
+      >
         <div className="flex justify-center mb-6">{icon}</div>
         <h2 className="text-2xl font-bold text-gray-800 mb-3">{title}</h2>
         <p className="text-gray-600 mb-2">{message}</p>

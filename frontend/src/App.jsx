@@ -17,7 +17,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import ResetPassword from "./pages/ResetPassword";
 import CustomDesignForm from "./pages/CustomDesignForm";
 import Contact from "./pages/Contact";
-import VendorApply from "./pages/VendorApply";
+import VendorApply from "./pages/vendorApply";
 import VendorDashboard from "./pages/VendorDashboard";
 
 function App() {

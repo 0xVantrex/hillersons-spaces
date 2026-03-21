@@ -268,3 +268,75 @@ Output: Elite BNB feature live. Can be delayed until after main marketplace is s
 ❌ contractor quoting
 ❌ multi-vendor commissions
 
+COMPLETED
+
+House Plans — full listing, purchase, admin upload, display
+
+
+PHASE 2 — BNB (current focus)
+Backend:
+
+BNB listing model fields (already in Listing.js — just needs activation)
+BNB-specific routes (create, get all, get one)
+Booking system — check availability, create booking, cancel booking
+Booking model (checkIn, checkOut, guestId, listingId, status, amount)
+Admin can list their own BNBs (same as vendors)
+Calendar/availability logic — prevent double booking
+
+Frontend:
+
+BNB browse page — shows all approved BNBs (admin + vendor listings together)
+BNB detail page — photos, amenities, pricing, availability calendar, book now
+Booking form — pick dates, guests, confirm
+My Bookings page — user sees their bookings
+Vendor dashboard — BNB host sees their listings + bookings + earnings
+Admin dashboard — see all BNBs + all bookings
+
+Payments:
+
+M-Pesa STK push for BNB deposit/full payment
+Payment confirmation + booking confirmation email
+
+
+PHASE 3 — Land listings
+
+Land model fields
+Browse + detail page
+Inquiry system (no direct payment — contact agent)
+Admin approval
+
+
+PHASE 4 — Houses for sale/rent
+
+House model fields
+Browse + detail page
+Inquiry / viewing request system
+
+
+PHASE 5 — Books
+
+Book model fields
+Digital download after M-Pesa payment
+Physical copy order system
+
+
+PHASE 6 — Services / Contractors
+
+Service listing
+Quote request form
+Contractor dashboard
+
+
+PHASE 7 — Monetization layer
+
+Featured listing payments
+Subscription plans for vendors (free/basic/pro)
+Commission tracking
+Vendor earnings dashboard
+
+
+PHASE 8 — Reviews + Trust
+
+Reviews on listings
+Verified vendor badges
+Rating aggregation
