@@ -19,6 +19,9 @@ import CustomDesignForm from "./pages/CustomDesignForm";
 import Contact from "./pages/Contact";
 import VendorApply from "./pages/vendorApply";
 import VendorDashboard from "./pages/VendorDashboard";
+import BNBPage from "./pages/BNBPage";
+import BNBDetail from "./pages/BNBDetail";
+import MyBookings from "./pages/MyBookings";
 
 function App() {
   const { user, loading, isAdmin, isApprovedVendor } = useAuth();
@@ -63,6 +66,7 @@ function App() {
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/home" element={<HomePage />} />
       <Route path="/AllProducts" element={<AllProducts />} />
+      <Route path="/AllProducts" element={<AllProducts />} />
       <Route path="/categories" element={<Categories />} />
       <Route path="/CategoryListing" element={<CategoryListing />} />
       <Route path="/cart" element={<CartPage />} />
@@ -71,8 +75,13 @@ function App() {
       <Route path="/contact" element={<Contact />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
 
+      {/* BNB — public, no auth required */}
+      <Route path="/bnb" element={<BNBPage />} />
+      <Route path="/bnb/:id" element={<BNBDetail />} />
+
       {/* Any logged-in user */}
       <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+      <Route path="/my-bookings" element={<RequireAuth><MyBookings /></RequireAuth>} />
 
       {/* Vendor apply — any logged-in user can apply */}
       <Route path="/vendor/apply" element={<RequireAuth><VendorApply /></RequireAuth>} />
